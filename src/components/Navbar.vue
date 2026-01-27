@@ -4,21 +4,19 @@ import { store } from '../store';
 import { auth } from '../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
-// --- IMPORT YOUR LOGO HERE ---
 import logoImg from '../assets/logo.png'; 
 
 const isScrolled = ref(false);
 const isLoggedIn = ref(false);
 const userData = ref(null);
+const isMenuOpen = ref(false);
 
-// Monitor Login Status
 onAuthStateChanged(auth, (user) => {
   isLoggedIn.value = !!user;
   userData.value = user;
   store.user = user;
 });
 
-// Compute user initial
 const userInitial = computed(() => {
     if (userData.value?.email) {
         return userData.value.email.charAt(0).toUpperCase();
@@ -32,12 +30,26 @@ const handleAuthClick = async () => {
   } else {
     store.openModal();
   }
+  closeMenu();
 };
 
-// Scroll Logic
+// --- SCROLL LOGIC ---
 const handleScroll = () => {
-  // Trigger effect slightly earlier
+  // 1. Handle Glass Effect
   isScrolled.value = window.scrollY > 20;
+
+  // 2. NEW: Auto-close menu on scroll
+  if (isMenuOpen.value) {
+    isMenuOpen.value = false;
+  }
+};
+
+const toggleMenu = () => {
+    isMenuOpen.value = !isMenuOpen.value;
+};
+
+const closeMenu = () => {
+    isMenuOpen.value = false;
 };
 
 onMounted(() => {
@@ -55,7 +67,7 @@ onUnmounted(() => {
   >
     <div class="container position-relative">
       
-      <router-link class="navbar-brand fw-bold brand-container" to="/">
+      <router-link class="navbar-brand fw-bold brand-container" to="/" @click="closeMenu">
         <span class="brand-text" :class="{ 'hide-text': isScrolled }">RA Consulting</span>
         <img 
             :src="logoImg" 
@@ -65,16 +77,25 @@ onUnmounted(() => {
         >
       </router-link>
 
-      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <button 
+        class="navbar-toggler border-0" 
+        type="button" 
+        @click="toggleMenu"
+        :aria-expanded="isMenuOpen"
+      >
         <span class="navbar-toggler-icon"></span>
       </button>
 
-      <div class="collapse navbar-collapse custom-mobile-menu" id="navbarNav">
+      <div 
+        class="collapse navbar-collapse custom-mobile-menu" 
+        :class="{ 'show': isMenuOpen }"
+        id="navbarNav"
+      >
         <ul class="navbar-nav ms-auto align-items-center gap-2">
-          <li class="nav-item"><router-link class="nav-link" to="/">Home</router-link></li>
-          <li class="nav-item"><a class="nav-link" href="/#about">About Us</a></li>
-          <li class="nav-item"><a class="nav-link" href="/#services">Services</a></li>
-          <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+          <li class="nav-item"><router-link class="nav-link" to="/" @click="closeMenu">Home</router-link></li>
+          <li class="nav-item"><a class="nav-link" href="/#about" @click="closeMenu">About Us</a></li>
+          <li class="nav-item"><a class="nav-link" href="/#services" @click="closeMenu">Services</a></li>
+          <li class="nav-item"><a class="nav-link" href="#contact" @click="closeMenu">Contact</a></li>
           
           <li class="nav-item d-flex align-items-center gap-2 auth-item">
             <div v-if="isLoggedIn && userData" class="user-avatar">
@@ -96,6 +117,41 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* --- STATE 2: SCROLLED (Light Glassy Background) --- */
+.glass-nav {
+    background-color: rgba(226, 229, 236, 0.65) !important; 
+    backdrop-filter: blur(1px); 
+    -webkit-backdrop-filter: blur(1px);
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* --- INTEGRATED TEXT TRANSITIONS --- */
+.glass-nav .nav-link {
+    color: #1a2b49 !important;
+    font-weight: 500;
+}
+
+.glass-nav .nav-link:hover {
+    color: #0d6efd !important; 
+}
+
+.glass-nav .auth-btn {
+    border-color: #1a2b49 !important;
+    color: #1a2b49 !important;
+}
+
+.glass-nav .auth-btn:hover {
+    background-color: #1a2b49 !important;
+    color: white !important;
+}
+
+.glass-nav .navbar-toggler-icon {
+    filter: invert(1);
+}
+
 /* --- BASE TRANSITIONS --- */
 .transition-navbar {
     transition: all 0.4s ease-in-out;
@@ -103,27 +159,10 @@ onUnmounted(() => {
     padding-bottom: 1rem;
 }
 
-/* --- STATE 1: TOP OF PAGE (Solid Navy) --- */
+/* --- STATE 1: TOP OF PAGE --- */
 .bg-solid {
     background-color: #1a2b49; 
     box-shadow: none;
-}
-
-/* --- STATE 2: SCROLLED (Ultra Glassy) --- */
-.glass-nav {
-    /* Very transparent navy */
-    background-color: rgba(26, 43, 73, 0.65) !important; 
-    
-    /* Strong Blur to make text readable */
-    backdrop-filter: blur(16px); 
-    -webkit-backdrop-filter: blur(16px);
-    
-    /* Shrink for sleekness */
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 /* --- BRAND ANIMATION --- */
@@ -170,31 +209,27 @@ onUnmounted(() => {
 .initial { color: white; font-weight: bold; }
 .auth-btn { border-radius: 20px; }
 
-/* --- CUSTOM MOBILE FLOATING MENU (The "Brief" Look) --- */
+/* --- CUSTOM MOBILE FLOATING MENU --- */
 @media (max-width: 991px) {
     .custom-mobile-menu {
         position: absolute;
-        top: 100%; /* Push slightly below navbar */
+        top: 100%;
         right: 0;
-        width: 260px; /* Fixed width (Brief look) */
-        
-        /* The Floating Bubble Look */
+        width: 260px;
         background: rgba(26, 43, 73, 0.95);
         backdrop-filter: blur(10px);
         padding: 20px;
         border-radius: 15px;
         box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        
-        /* Animation offset */
         margin-top: 10px; 
     }
 
-    /* Style the links inside the bubble */
     .navbar-nav .nav-link {
         padding: 10px 0;
         border-bottom: 1px solid rgba(255,255,255,0.05);
         text-align: center;
+        color: white !important;
     }
     
     .navbar-nav .nav-link:last-child { border-bottom: none; }
