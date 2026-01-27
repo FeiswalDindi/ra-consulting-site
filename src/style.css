@@ -45,3 +45,26 @@ body .btn-outline-primary:hover {
 body {
     padding-top: 80px; /* Pushes content down so the navbar doesn't cover it */
 }
+
+/* --- SCROLL REVEAL ANIMATIONS --- */
+
+/* 1. Initial State: Hidden and shifted down */
+.before-enter {
+    opacity: 0;
+    transform: translateY(80px); /* Start 80px below final position */
+    transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    /* NOTE: The cubic-bezier makes the movement start fast and slow down smoothly */
+}
+
+/* 2. Final State: Visible and back to original position */
+.enter {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Utility classes to stagger animations (one after another) */
+.delay-100 { transition-delay: 100ms; }
+.delay-200 { transition-delay: 200ms; }
+.delay-300 { transition-delay: 300ms; }
+.delay-400 { transition-delay: 400ms; }
