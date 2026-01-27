@@ -116,22 +116,30 @@ const scrollRight = () => {
 
 /* --- LOGO STYLES --- */
 .client-logo {
-    height: 40px; /* Uniform height */
+    height: 40px; 
     width: auto;
     
-    /* Default State: Full Color & Clear */
+    /* Default: Normal size, full color */
     opacity: 1;
-    filter: grayscale(0%); /* Ensure color is visible */
-    
-    /* Start at normal scale */
+    filter: grayscale(0%);
     transform: scale(1);
     
-    /* "Cool" Smooth Transition (cubic-bezier for a professional feel) */
-    transition: transform 0.4s cubic-bezier(0.215, 0.610, 0.355, 1.000), opacity 0.4s ease;
+    /* Smooth transition */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    /* The cubic-bezier above adds a slight "bounce" to the zoom */
+}
+
+.client-item {
+    cursor: pointer;
+    perspective: 1000px; /* Adds 3D depth */
+}
+
+.client-item:hover .client-logo {
+    /* ZOOM IN EFFECT (Get Bigger) */
+    transform: scale(1.2); 
     
-    object-fit: contain;
-    /* Optional: Add a slight drop shadow to make them stand out from white bg */
-    filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
+    /* Add a nice glow/shadow when lifting up */
+    filter: drop-shadow(0 10px 10px rgba(0,0,0,0.15));
 }
 
 .client-item {
