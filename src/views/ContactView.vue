@@ -31,11 +31,11 @@ const handleContactSubmit = () => {
               <div class="row mb-3">
                 <div class="col-md-6">
                   <label class="form-label fw-bold text-secondary">Your Name</label>
-                  <input type="text" class="form-control bg-light" placeholder="John Doe">
+                  <input type="text" class="form-control bg-light" placeholder="Full Name" required>
                 </div>
                 <div class="col-md-6">
                    <label class="form-label fw-bold text-secondary">Subject</label>
-                   <input type="text" class="form-control bg-light" placeholder="Project Inquiry">
+                   <input type="text" class="form-control bg-light" placeholder="Title of Inquiry">
                 </div>
               </div>
               <div class="mb-4">
