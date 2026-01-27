@@ -4,7 +4,7 @@ import { auth } from '../firebase';
 import { GoogleAuthProvider, signInWithCredential, onAuthStateChanged } from 'firebase/auth';
 
 // ⚠️ PASTE YOUR CLIENT ID HERE
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID_GOES_HERE"; 
+const GOOGLE_CLIENT_ID = "563844962607-l97k6aknol8n3duh1bgi0k17tknf9atf.apps.googleusercontent.com"; 
 
 onMounted(() => {
   onAuthStateChanged(auth, (user) => {
