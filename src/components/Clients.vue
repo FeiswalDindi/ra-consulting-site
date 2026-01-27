@@ -3,13 +3,12 @@ import { ref, onMounted, onUnmounted } from 'vue';
 
 // Using placeholders. Ideally, replace these with real logo images from your assets
 const clients = [
-    { name: "KCA University", logo: "https://via.placeholder.com/150x60?text=KCA+Uni" },
-    { name: "Safaricom", logo: "https://via.placeholder.com/150x60?text=Safaricom" },
-    { name: "Equity Bank", logo: "https://via.placeholder.com/150x60?text=Equity" },
-    { name: "Direct Aid", logo: "https://via.placeholder.com/150x60?text=Direct+Aid" },
-    { name: "Kenya Govt", logo: "https://via.placeholder.com/150x60?text=GoK" },
-    { name: "UN Habitat", logo: "https://via.placeholder.com/150x60?text=UN+Habitat" },
-    { name: "Britam", logo: "https://via.placeholder.com/150x60?text=Britam" }
+    { name: "KCA University", logo: "/kca-logo.png" },
+    { name: "Safaricom", logo: "/safaricom.png" },
+    { name: "Equity Bank", logo: "/equity-logo.png" },
+    { name: "Direct Aid", logo: "/DirectAid.png" },
+    { name: "Kenya Govt", logo: "/kenyanGov.png" },
+    { name: "Britam", logo: "/britam.jpg" }
 ];
 
 // Duplicate the list to create the infinite loop effect
@@ -119,16 +118,32 @@ const scrollRight = () => {
 .client-logo {
     height: 40px; /* Uniform height */
     width: auto;
-    opacity: 0.5; /* Start dim */
-    filter: grayscale(100%); /* Start Black & White */
-    transition: all 0.3s ease;
+    
+    /* Default State: Full Color & Clear */
+    opacity: 1;
+    filter: grayscale(0%); /* Ensure color is visible */
+    
+    /* Start at normal scale */
+    transform: scale(1);
+    
+    /* "Cool" Smooth Transition (cubic-bezier for a professional feel) */
+    transition: transform 0.4s cubic-bezier(0.215, 0.610, 0.355, 1.000), opacity 0.4s ease;
+    
     object-fit: contain;
+    /* Optional: Add a slight drop shadow to make them stand out from white bg */
+    filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
+}
+
+.client-item {
+    cursor: pointer; /* Show clickable cursor */
 }
 
 .client-item:hover .client-logo {
-    opacity: 1;
-    filter: grayscale(0%); /* Color on hover */
-    transform: scale(1.1);
+    /* Hover State: Zoom OUT nicely */
+    transform: scale(0.85); /* Shrink to 85% size */
+    
+    /* Optional: dim slightly on zoom out to focus attention */
+    opacity: 0.8; 
 }
 
 /* --- ARROW BUTTONS --- */
