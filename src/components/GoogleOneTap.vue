@@ -1,39 +1,57 @@
 <script setup>
 import { onMounted } from 'vue';
-import { auth } from '../firebase'; 
-import { GoogleAuthProvider, signInWithCredential, onAuthStateChanged } from 'firebase/auth';
+import { auth, googleProvider } from '../firebase';
+import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
 
-// ⚠️ PASTE YOUR CLIENT ID HERE
-const GOOGLE_CLIENT_ID = "563844962607-l97k6aknol8n3duh1bgi0k17tknf9atf.apps.googleusercontent.com"; 
+const initializeGoogleOneTap = () => {
+  // 1. Check if the script is loaded
+  if (!window.google) {
+    console.warn("Google Script not loaded yet. Retrying...");
+    setTimeout(initializeGoogleOneTap, 500); // Try again in 0.5s
+    return;
+  }
 
-onMounted(() => {
-  onAuthStateChanged(auth, (user) => {
-    if (!user) initializeOneTap();
+  // 2. Initialize One Tap
+  window.google.accounts.id.initialize({
+    // IMPORTANT: This must match the "Web client ID" from Firebase Authentication settings
+    client_id: "563844962607-l97k6aknol8n3duh1bgi0k17tknf9atf.apps.googleusercontent.com", 
+    
+    // The callback when user clicks "Sign In"
+    callback: handleCredentialResponse,
+    
+    // Debugging: Print errors to console
+    cancel_on_tap_outside: false,
+    context: 'signin',
   });
-});
 
-const initializeOneTap = () => {
-  if (window.google) {
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleResponse,
-      cancel_on_tap_outside: false,
-      context: 'signin',
-    });
-    window.google.accounts.id.prompt((notif) => {
-      if (notif.isNotDisplayed()) console.log("One Tap skipped:", notif.getNotDisplayedReason());
-    });
+  // 3. Render the popup
+  window.google.accounts.id.prompt((notification) => {
+    if (notification.isNotDisplayed()) {
+      console.error("One Tap blocked because:", notification.getNotDisplayedReason());
+    } else if (notification.isSkippedMoment()) {
+      console.warn("One Tap skipped because:", notification.getSkippedReason());
+    } else {
+      console.log("One Tap displayed successfully!");
+    }
+  });
+};
+
+const handleCredentialResponse = async (response) => {
+  try {
+    const credential = GoogleAuthProvider.credential(response.credential);
+    await signInWithCredential(auth, credential);
+    console.log("Logged in via One Tap!");
+  } catch (error) {
+    console.error("One Tap Login Error:", error);
   }
 };
 
-const handleResponse = (response) => {
-  const credential = GoogleAuthProvider.credential(response.credential);
-  signInWithCredential(auth, credential)
-    .then((res) => console.log("Auto-login success:", res.user))
-    .catch((err) => console.error("One Tap Error:", err));
-};
+onMounted(() => {
+  // Wait a moment for the page to settle, then load
+  setTimeout(initializeGoogleOneTap, 1000);
+});
 </script>
 
 <template>
-  <div style="display: none;"></div>
+  <div id="one-tap-container"></div>
 </template>
