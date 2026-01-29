@@ -1,100 +1,97 @@
 <script setup>
-const values = [
-    {
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12.516 2.17a.75.75 0 00-1.032 0 11.209 11.209 0 01-7.877 3.08.75.75 0 00-.722.515A12.74 12.74 0 002.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 00.374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.352-.272-2.636-.759-3.807a.75.75 0 00-.722-.516l-.143.001c-2.996 0-5.717-1.17-7.734-3.08zm3.094 8.016a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>',
-        title: "Integrity",
-        description: "We conduct all our work with honesty, transparency, and unyielding ethical responsibility."
-    },
-    {
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>',
-        title: "Innovation",
-        description: "We embrace creativity, data science, and forward-thinking approaches to solve modern problems."
-    },
-    {
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm11.378-3.917c-.89-.777-2.366-.777-3.255 0a.75.75 0 01-.988-1.129c1.454-1.272 3.776-1.272 5.23 0 1.539 1.345 1.539 3.794 0 5.14-.89.777-2.366.777-3.255 0a.75.75 0 10.988 1.129c1.454 1.272 3.776 1.272 5.23 0 1.539-1.346 1.539-3.795 0-5.14z" clip-rule="evenodd" /></svg>',
-        title: "Impact",
-        description: "Our work is purpose-driven, focusing on solutions that create measurable and sustainable value."
-    },
-    {
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12.516 2.17a.75.75 0 00-1.032 0 11.209 11.209 0 01-7.877 3.08.75.75 0 00-.722.515A12.74 12.74 0 002.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 00.374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.352-.272-2.636-.759-3.807a.75.75 0 00-.722-.516l-.143.001c-2.996 0-5.717-1.17-7.734-3.08zm3.094 8.016a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>',
-        title: "Collaboration",
-        description: "We believe the best solutions are co-created with clients and stakeholders for lasting success."
-    }
-];
+// No script needed
 </script>
 
 <template>
-  <section class="py-5" id="values">
-    <div class="container py-lg-4">
+  <section class="py-5 bg-white">
+    <div class="container">
       
-      <div class="row justify-content-center mb-5" v-scroll-reveal>
-        <div class="col-lg-8 text-center">
-          <h6 class="text-primary fw-bold text-uppercase ls-2">Our Principles</h6>
-          <h2 class="fw-bold display-5 mb-3">Core Values</h2>
-          <p class="lead text-muted">The guiding principles that define our work and culture.</p>
+      <div class="row justify-content-center text-center mb-5" v-scroll-reveal>
+        <div class="col-lg-8">
+          <h6 class="text-uppercase text-gold ls-2 fw-bold mb-2">Our Ethos</h6>
+          <h2 class="fw-bold text-navy">Our Core Values</h2>
+          <div class="divider mx-auto mt-4 bg-gold"></div>
         </div>
       </div>
-
-      <div class="row g-4">
-        <div 
-          class="col-md-6 col-lg-3" 
-          v-for="(val, index) in values" 
-          :key="index"
-          v-scroll-reveal 
-          :class="`delay-${(index + 1) * 100}`"
-        >
-          <div class="value-card h-100 p-4 text-center rounded-4 bg-white">
-            <div class="icon-wrapper mx-auto mb-4">
-                <div v-html="val.icon" class="svg-icon"></div>
+      
+      <div class="row g-4" v-scroll-reveal="{ delay: 200 }">
+        
+        <div class="col-md-6 col-lg-3">
+          <div class="value-card h-100 p-4 bg-light shadow-sm rounded-3 text-center border-0">
+            <div class="icon-box mx-auto mb-4 bg-navy text-white">
+               <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.057.218.095.293.118a.55.55 0 0 0 .101.025.615.615 0 0 0 .1-.025c.076-.023.174-.061.294-.118.24-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.159 7.159 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.158 7.158 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z"/>
+                  <path d="M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                </svg>
             </div>
-            
-            <h4 class="fw-bold mb-3">{{ val.title }}</h4>
-            <p class="text-muted mb-0 small">{{ val.description }}</p>
+            <h4 class="fw-bold mb-3 text-navy">Integrity</h4>
+            <p class="small text-muted mb-0">We conduct all our work with honesty, transparency, and ethical responsibility.</p>
           </div>
         </div>
-      </div>
 
+        <div class="col-md-6 col-lg-3">
+          <div class="value-card h-100 p-4 bg-light shadow-sm rounded-3 text-center border-0">
+            <div class="icon-box mx-auto mb-4 bg-navy text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M2 6a6 6 0 1 1 10.174 4.31c-.203.196-.359.4-.453.619l-.762 1.769A.5.5 0 0 1 10.5 13a.5.5 0 0 1 0 1 .5.5 0 0 1 0 1l.224.447a1 1 0 0 1 .894.553l.224.447a1 1 0 0 1-.894 1.553h-6a1 1 0 0 1-.894-1.553l.224-.447a1 1 0 0 1 .894-.553L6.5 14a.5.5 0 0 1 0-1 .5.5 0 0 1 0-1 .5.5 0 0 1-.453-1.09l-.762-1.769C5.082 10.05 4.926 9.846 4.723 9.65A5.996 5.996 0 0 1 2 6zm2.5 0a3.5 3.5 0 1 0 7 0c0 1.059-.475 2.016-1.229 2.65-.297.249-.523.585-.644.962L9.224 11H6.776l-.403-1.388c-.121-.377-.347-.713-.644-.962A3.496 3.496 0 0 0 4.5 6z"/>
+                </svg>
+            </div>
+            <h4 class="fw-bold mb-3 text-navy">Innovation</h4>
+            <p class="small text-muted mb-0">We embrace creativity, technology, and data science to solve emerging challenges.</p>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+          <div class="value-card h-100 p-4 bg-light shadow-sm rounded-3 text-center border-0">
+            <div class="icon-box mx-auto mb-4 bg-navy text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V2z"/>
+                </svg>
+            </div>
+            <h4 class="fw-bold mb-3 text-navy">Impact</h4>
+            <p class="small text-muted mb-0">Our work is purpose-driven, focusing on solutions that create measurable value.</p>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+          <div class="value-card h-100 p-4 bg-light shadow-sm rounded-3 text-center border-0">
+            <div class="icon-box mx-auto mb-4 bg-navy text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM2.04 4.326c.325 1.329 2.532 2.54 6.354 2.919V5.256c-4.42-1.379-6.13-2.18-6.354-.93zM8 6.64v3.879c4.425 1.258 6.265 2.658 6.36 3.634.08.834-.528 2.103-2.26 2.298C12.02 16.27 8.92 12.5 8 6.64zm-1.354.918c-4.42 1.379-6.13 2.18-6.354.93-.08-.834.528-2.103 2.26-2.298 3.52 1.353 4.094 1.369 4.094 1.369z"/>
+                </svg>
+            </div>
+            <h4 class="fw-bold mb-3 text-navy">Collaboration</h4>
+            <p class="small text-muted mb-0">We believe the best solutions are co-created with clients and stakeholders.</p>
+          </div>
+        </div>
+
+      </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.ls-2 { letter-spacing: 2px; }
+.text-navy { color: #1a2b49; }
+.bg-navy { background-color: #1a2b49; }
+.text-gold { color: #c5a059; }
+.bg-gold { background-color: #c5a059; }
 
-/* --- CARD STYLES --- */
+.divider { width: 60px; height: 3px; }
+
 .value-card {
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  border: 1px solid transparent;
+  transition: transform 0.3s ease;
 }
-
 .value-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px -5px rgba(26, 43, 73, 0.12);
-  border-color: rgba(26, 43, 73, 0.05);
 }
 
-/* --- ICON STYLES --- */
-.icon-wrapper {
-  width: 70px;
-  height: 70px;
-  background: rgba(26, 43, 73, 0.05);
-  color: #1a2b49;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
+.icon-box {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 10px rgba(26, 43, 73, 0.15);
 }
 
-.value-card:hover .icon-wrapper {
-    background: #1a2b49;
-    color: white;
-    transform: scale(1.1);
-}
-
-:deep(.svg-icon svg) {
-    width: 32px;
-    height: 32px;
-}
+.ls-2 { letter-spacing: 2px; font-size: 0.8rem; }
 </style>

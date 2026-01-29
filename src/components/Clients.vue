@@ -1,123 +1,94 @@
 <script setup>
-// The exact client list from your Company Profile
+// We list the exact filenames you have in your public/logo folder
 const clients = [
-    { name: 'Africa Nazarene University', industry: 'Education' },
-    { name: 'Fortress Engineering Ltd', industry: 'Engineering' },
-    { name: 'Green World', industry: 'Sustainability' },
-    { name: 'Global Strategic Pillars', industry: 'Consultancy' },
-    { name: 'Ebullient Agencies Ltd', industry: 'Professional Services' },
-    { name: 'Digital Storytelling Africa', industry: 'Media' },
-    { name: 'Farsight Africa Group', industry: 'Research' },
-    { name: 'All-in Store', industry: 'Retail' },
-    { name: 'Kenya Export Promotion', industry: 'Government Agency' },
-    { name: 'KAU Welfare', industry: 'Community' },
-    { name: 'Think Lab Analytics', industry: 'Data Science' },
-    { name: 'Pivot Assets', industry: 'Finance' }
+    { name: 'Africa Nazarene University', logo: '/logo/Africa-Nazarene-University.png' },
+    { name: 'Farsight Africa Group', logo: '/logo/Farsight-Africa-Group.png' },
+    { name: 'Fortress Engineering', logo: '/logo/Fortress-Engineering-Ltd.jpg' },
+    { name: 'Kenya Export Promotion', logo: '/logo/Kenya-Export-Promotion.jpg' },
+    { name: 'KCAU Welfare', logo: '/logo/KCAU-Welfare.png' },
+    { name: 'Green World', logo: '/logo/Green-World.png' },
+    { name: 'Ebullient Agencies', logo: '/logo/Ebullient-Agencies-Ltd.png' },
+    { name: 'Pivot Assets', logo: '/logo/Pivot-Assets.jpg' },
+    { name: 'Digital Storytelling Africa', logo: '/logo/Digital-Storytelling-Africa.png' },
+    { name: 'ThinkLab', logo: '/logo/ThinkLab_SVG.svg' },
+    { name: 'Global Strategic Pillars', logo: '/logo/Global-Strategic-Pillars.jpg' },
+    { name: 'All In Store', logo: '/logo/All-in_Store.png' }
 ];
 </script>
 
 <template>
-  <section id="clients" class="py-5 bg-white overflow-hidden">
-    <div class="container mb-4">
-      <div class="row justify-content-center text-center" v-scroll-reveal>
-        <div class="col-lg-8">
-          <h6 class="text-uppercase ls-2 text-muted mb-2">Our Partners</h6>
-          <h2 class="display-6 fw-bold text-primary">Trusted by Industry Leaders</h2>
-          <div class="divider mx-auto mt-3"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="marquee-wrapper">
-      <div class="marquee-track">
-        
-        <div 
-            v-for="(client, index) in [...clients, ...clients]" 
-            :key="index" 
-            class="client-item"
-        >
-          <div class="client-card">
-            <span class="client-name">{{ client.name }}</span>
+  <section class="clients-section py-5 bg-white border-top border-bottom">
+    <div class="container-fluid overflow-hidden">
+      
+      <div class="row justify-content-center text-center mb-4">
+          <div class="col-lg-8">
+              <h6 class="text-uppercase text-muted ls-2 small fw-bold">Trusted Partners & Clients</h6>
           </div>
-        </div>
-
       </div>
+
+      <div class="marquee-wrapper">
+        <div class="marquee-track">
+            
+            <div v-for="(client, index) in clients" :key="index" class="client-logo mx-4">
+                <img :src="client.logo" :alt="client.name" class="img-fluid">
+            </div>
+
+            <div v-for="(client, index) in clients" :key="'dup-'+index" class="client-logo mx-4">
+                 <img :src="client.logo" :alt="client.name" class="img-fluid">
+            </div>
+
+        </div>
+      </div>
+
     </div>
   </section>
 </template>
 
 <style scoped>
-.text-primary { color: #1a2b49 !important; }
-.divider { width: 60px; height: 3px; background: #1a2b49; }
+.clients-section { background: #fcfcfc; }
+.ls-2 { letter-spacing: 2px; }
 
-/* --- MARQUEE CONTAINER --- */
 .marquee-wrapper {
-    position: relative;
     width: 100%;
     overflow: hidden;
-    padding: 20px 0;
-    /* Fade edges to smooth entrance/exit */
-    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    position: relative;
+    /* Fade edges for smooth look */
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
 }
 
 .marquee-track {
     display: flex;
-    gap: 2rem; /* Space between cards */
-    width: max-content;
-    animation: scroll 40s linear infinite; /* Smooth continuous scroll */
-}
-
-/* Pause scrolling when user hovers to read */
-.marquee-track:hover {
-    animation-play-state: paused;
-}
-
-@keyframes scroll {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); } /* Move exactly half the width */
-}
-
-/* --- CLIENT CARD (Industrial Tile Look) --- */
-.client-item {
-    flex-shrink: 0;
-    display: flex;
     align-items: center;
+    width: max-content;
+    /* Slower animation for better visibility (increased to 50s) */
+    animation: scroll 50s linear infinite; 
 }
 
-.client-card {
-    height: 80px;
-    padding: 0 30px;
-    background: #f8f9fa; /* Light industrial grey */
-    border: 1px solid #dee2e6;
-    border-left: 4px solid #1a2b49; /* Navy accent */
+.client-logo {
+    width: 140px; /* Slightly larger to see details better */
+    height: 90px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    min-width: 200px;
 }
 
-.client-name {
-    font-weight: 700;
-    color: #495057;
-    font-size: 0.95rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
+.client-logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    /* Grayscale filter removed here so they are always colored */
+    transition: transform 0.3s ease;
 }
 
-/* Hover Effect: Pop up and turn Navy */
-.client-card:hover {
-    transform: translateY(-5px);
-    background: #1a2b49;
-    box-shadow: 0 10px 20px rgba(26, 43, 73, 0.15);
-    border-color: #1a2b49;
+.client-logo img:hover {
+    /* Just a slight zoom on hover now */
+    transform: scale(1.1);
 }
 
-.client-card:hover .client-name {
-    color: white;
+/* The Continuous Scroll Animation */
+@keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); } 
 }
 </style>

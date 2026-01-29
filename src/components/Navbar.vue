@@ -398,4 +398,20 @@ onUnmounted(() => {
 
 /* Dropdown Tweaks */
 .dropdown-menu-end { right: 0; left: auto; }
+
+/* Update your existing .navbar class with these specific properties */
+.navbar {
+  transition: all 0.4s ease-in-out;
+  padding: 1rem 0;
+  width: 100%;
+  top: 0;
+  z-index: 1000;
+  
+  /* --- THE FLICKER FIX --- */
+  -webkit-transform: translateZ(0); /* Promotes to hardware acceleration */
+  transform: translateZ(0); 
+  backface-visibility: hidden;      /* Prevents micro-stuttering */
+}
+
+/* Keep your existing .scrolled-nav styles... */
 </style>

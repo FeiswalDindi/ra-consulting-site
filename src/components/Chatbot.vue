@@ -57,9 +57,9 @@ const sendMessage = async () => {
     isTyping.value = true;
 
     try {
-        // 1. Updated URL to v1 (Standard Production)
+        // FIXED URL: Using 'v1beta' (Required for Gemini 1.5 Flash on free tier)
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -70,32 +70,25 @@ const sendMessage = async () => {
                                 { text: SYSTEM_PROMPT + "\n\nUser Question: " + input }
                             ]
                         }
-                    ],
-                    // Optional: Low temperature for more professional, factual answers
-                    generationConfig: {
-                        temperature: 0.4,
-                        maxOutputTokens: 250,
-                    }
+                    ]
                 })
             }
         );
 
         const data = await response.json();
 
-        // 2. Handle Google API Errors (Quota, Key, etc.)
+        // 1. Error Handling (Check for Google Errors)
         if (data.error) {
-            throw new Error(data.error.message);
+            console.error("Google API Error:", data.error);
+            throw new Error(`Google says: ${data.error.message}`);
         }
 
-        // 3. Handle Content Blocking (Safety Filters)
-        if (data.candidates?.[0]?.finishReason === "SAFETY") {
-            throw new Error("My safety filters blocked this response. Please ask a business-related question.");
-        }
-
+        // 2. Extract Response
         const botReply = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!botReply) {
-            throw new Error("The AI brain returned an empty response.");
+             console.error("Empty Response:", data);
+            throw new Error("I received an empty response. Please try again.");
         }
 
         messages.value.push({
@@ -105,11 +98,11 @@ const sendMessage = async () => {
         });
 
     } catch (error) {
-        console.error("AI Error:", error);
+        console.error("AI Logic Error:", error);
         messages.value.push({
             id: Date.now() + 1,
             sender: 'bot',
-            text: `System Alert: ${error.message}`
+            text: `Connection Issue: ${error.message}`
         });
     } finally {
         isTyping.value = false;

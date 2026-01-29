@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { store } from '../store';
 
-// 1. Accept optional "previewData" prop
+// 1. Accept optional "previewData" prop (For Admin Preview)
 const props = defineProps({
   previewData: {
     type: Array,
@@ -69,12 +69,15 @@ onUnmounted(() => {
                 </transition>
                 
                 <div class="d-flex justify-content-center gap-3 animate-buttons">
-                    <a href="#" class="btn btn-light btn-lg px-5 py-3 rounded-pill fw-bold text-primary shadow-lg" @click.prevent>
-                        Explore Services
-                    </a>
-                    <a href="#" class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill fw-bold" @click.prevent>
+                    
+                    <router-link to="/services" class="btn btn-light btn-lg px-5 py-3 rounded-pill fw-bold text-primary shadow-lg">
+                        {{ store.content.hero.buttonText }}
+                    </router-link>
+                    
+                    <router-link to="/contact" class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill fw-bold">
                         Partner With Us
-                    </a>
+                    </router-link>
+
                 </div>
 
                 <div class="d-flex justify-content-center gap-2 mt-5">

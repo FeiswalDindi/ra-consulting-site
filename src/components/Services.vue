@@ -1,56 +1,73 @@
 <script setup>
+import { useRouter } from 'vue-router';
+const router = useRouter();
+
 const services = [
     {
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M9.315 7.584C12.195 3.883 16.695 1.5 21.75 1.5a.75.75 0 01.75.75c0 5.056-2.383 9.555-6.084 12.436h.004l-1.222 1.222a.75.75 0 01-1.06 0l-5.25-5.25a.75.75 0 010-1.06l1.222-1.222v.004zM4.5 21.75l-2.25-2.25a.75.75 0 010-1.06l5.25-5.25a.75.75 0 011.06 0l2.25 2.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 01-1.06 0z" clip-rule="evenodd" /></svg>',
-        title: "Strategic Planning",
-        description: "Developing actionable roadmaps to achieve long-term organizational goals and sustainable growth."
+        title: 'Strategic Advisory',
+        description: 'Governance frameworks, board evaluations, and strategic planning.',
+        path: '/services/strategy',
+        // SVG: Compass/Strategy
+        icon: '<path d="M8 16.016a7.5 7.5 0 0 0 1.962-14.74A1 1 0 0 0 9 0H7a1 1 0 0 0-.962 1.276A7.5 7.5 0 0 0 8 16.016zm6.5-7.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0z"/><path d="m6.94 7.44 4.95-2.83-2.83 4.95-4.949 2.83 2.828-4.95z"/>'
     },
     {
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a1.875 1.875 0 01-1.875-1.875V5.25A3.75 3.75 0 009 1.5H5.625z" /><path d="M12.971 1.816A5.23 5.23 0 0114.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 013.434 1.279 9.768 9.768 0 00-6.963-6.963z" /></svg>',
-        title: "Research & Policy Advisory",
-        description: "Evidence-based insights and policy analysis to inform decision-making in complex environments."
+        title: 'Research & Policy',
+        description: 'Baseline surveys, socio-economic assessments, and impact evaluation.',
+        path: '/services/research',
+        // SVG: Document/Search
+        icon: '<path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/><path d="M3 12.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0-3a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5z"/>'
     },
     {
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path fill-rule="evenodd" d="M2.25 13.5a8.25 8.25 0 018.25-8.25.75.75 0 01.75.75v6.75H18a.75.75 0 01.75.75 8.25 8.25 0 01-16.5 0zm1.5 0a6.75 6.75 0 006.75 6.75v-6.75H3.75z" clip-rule="evenodd" /><path d="M12 10.5V3a8.25 8.25 0 018.25 8.25H12z" /></svg>',
-        title: "Data Analytics & Visualization",
-        description: "Turning raw data into clear, interactive visual stories that drive business intelligence."
+        title: 'Data & ICT',
+        description: 'Digital transformation, software development, and big data analytics.',
+        path: '/services/ict',
+        // SVG: Laptop/Code
+        icon: '<path d="M13.5 3a.5.5 0 0 1 .5.5V11H2V3.5a.5.5 0 0 1 .5-.5h11zm-11-1A1.5 1.5 0 0 0 1 3.5V12h14V3.5A1.5 1.5 0 0 0 13.5 2h-11zM0 12.5h16a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5z"/>'
     },
     {
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M4.5 6.375a4.125 4.125 0 118.25 0 4.125 4.125 0 01-8.25 0zM14.25 8.625a3.375 3.375 0 116.75 0 3.375 3.375 0 01-6.75 0zM1.5 19.125a7.125 7.125 0 0114.25 0v.003l-.001.119a.75.75 0 01-.363.63 13.067 13.067 0 01-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 01-.364-.63l-.001-.122zM17.25 19.125a7.125 7.125 0 01-7.125 7.125v.003l.001.119a.75.75 0 01-.363.63 13.067 13.067 0 01-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 01-.364-.63l-.001-.122zM17.25 19.125c0 1.207.335 2.337.916 3.303a15.752 15.752 0 004.334-2.46.75.75 0 00.167-.78A6.749 6.749 0 0021 15.75a6.75 6.75 0 00-3.75 3.375z" /></svg>',
-        title: "Training & Capacity Building",
-        description: "Empowering your teams with the skills and knowledge needed to excel in a data-driven world."
+        title: 'Training & Capacity',
+        description: 'Workshops on governance, data literacy, and leadership.',
+        path: '/services/training',
+        // SVG: Easel/Presentation
+        icon: '<path d="M8 1.12c2.27 0 4.436.567 5.727 1.488.583.417.864.87.973 1.4.11.53-.02 1.135-.386 1.765-.365.626-.95 1.233-1.688 1.77C11.162 8.52 9.61 9 8 9c-1.61 0-3.162-.48-4.626-1.457-.738-.537-1.323-1.144-1.688-1.77-.367-.63-.496-1.235-.386-1.765.109-.53.39-.983.973-1.4C3.564 1.687 5.73 1.12 8 1.12z"/>'
     }
 ];
+
+const navigateTo = (path) => {
+    router.push(path);
+}
 </script>
 
 <template>
-  <section class="py-5 bg-light-subtle section-diagonal" id="services">
-    <div class="container py-lg-5">
+  <section class="py-5 bg-white" id="services">
+    <div class="container py-4">
       
-      <div class="row justify-content-center mb-5" v-scroll-reveal>
-        <div class="col-lg-8 text-center">
-          <h6 class="text-primary fw-bold text-uppercase ls-2">Our Expertise</h6>
-          <h2 class="fw-bold display-5 mb-3">What We Offer</h2>
-          <p class="lead text-muted">We provide comprehensive solutions tailored to complex challenges.</p>
+      <div class="row justify-content-center text-center mb-5" v-scroll-reveal>
+        <div class="col-lg-8">
+            <h6 class="text-uppercase text-gold ls-2 fw-bold mb-2">What We Do</h6>
+            <h2 class="display-5 fw-bold text-navy">Our Services</h2>
+            <div class="divider mx-auto mt-4 bg-gold"></div>
+            <p class="text-muted mt-3">Comprehensive solutions tailored to your institutional needs.</p>
         </div>
       </div>
 
-      <div class="row g-4">
-        <div 
-          class="col-md-6 col-lg-3" 
-          v-for="(service, index) in services" 
-          :key="index"
-          v-scroll-reveal 
-          :class="`delay-${(index + 1) * 100}`" 
-        >
-          <div class="service-card h-100 p-4 p-lg-5 text-center rounded-4 bg-white">
-            <div class="icon-wrapper mx-auto mb-4">
-                <div v-html="service.icon" class="svg-icon"></div>
-            </div>
-            <h4 class="fw-bold mb-3">{{ service.title }}</h4>
-            <p class="text-muted mb-0">{{ service.description }}</p>
+      <div class="row g-4" v-scroll-reveal="{ delay: 200 }">
+          <div class="col-md-6 col-lg-3" v-for="(service, index) in services" :key="index">
+              <div class="service-card p-4 h-100 rounded-3 text-center bg-light-navy position-relative border" @click="navigateTo(service.path)">
+                  
+                  <div class="icon-box mx-auto mb-4 bg-navy text-white shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16" v-html="service.icon">
+                      </svg>
+                  </div>
+
+                  <h5 class="fw-bold text-navy mb-3">{{ service.title }}</h5>
+                  <p class="text-muted small mb-0">{{ service.description }}</p>
+                  
+                  <div class="hover-arrow text-gold mt-3 opacity-0 transition-all">
+                      ➝
+                  </div>
+              </div>
           </div>
-        </div>
       </div>
 
     </div>
@@ -58,47 +75,40 @@ const services = [
 </template>
 
 <style scoped>
-.bg-light-subtle { background-color: #f8f9fa; }
-.ls-2 { letter-spacing: 2px; }
+/* COLORS */
+.text-navy { color: #1a2b49; }
+.bg-navy { background-color: #1a2b49; }
+.text-gold { color: #c5a059; }
+.bg-gold { background-color: #c5a059; }
+.bg-light-navy { background-color: #f8f9fa; }
 
-/* --- PROFESSIONAL CARD STYLES --- */
+.divider { width: 60px; height: 3px; }
+.ls-2 { letter-spacing: 2px; font-size: 0.8rem; }
+
+/* CARD STYLING */
 .service-card {
-  /* No Border, just shadow */
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  border: 1px solid transparent; /* Placeholder for smooth transition */
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
-/* Hover State: Lift up and enhance shadow */
 .service-card:hover {
-  transform: translateY(-12px);
-  box-shadow: 0 20px 40px -5px rgba(26, 43, 73, 0.12);
-  border-color: rgba(26, 43, 73, 0.05); /* Very subtle border on hover */
+    transform: translateY(-8px);
+    background-color: #fff; /* Light up on hover */
+    box-shadow: 0 15px 30px rgba(26, 43, 73, 0.1);
+    border-color: #1a2b49 !important;
 }
 
-/* --- NEW ICON STYLES --- */
-.icon-wrapper {
-  width: 80px;
-  height: 80px;
-  /* Subtle primary color background circle */
-  background: rgba(26, 43, 73, 0.08);
-  color: #1a2b49; /* Primary color for the icon itself */
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
+.service-card:hover .hover-arrow {
+    opacity: 1 !important;
+    transform: translateX(5px);
 }
 
-.service-card:hover .icon-wrapper {
-    background: #1a2b49; /* Turn background solid on hover */
-    color: white; /* Turn icon white on hover */
-    transform: scale(1.1); /* Slight grow effect */
-}
-
-/* Ensure SVGs size correctly */
-:deep(.svg-icon svg) {
-    width: 36px;
-    height: 36px;
+/* ICON BOX */
+.icon-box {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 10px rgba(26, 43, 73, 0.1);
 }
 </style>
