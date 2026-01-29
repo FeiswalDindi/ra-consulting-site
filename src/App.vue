@@ -1,16 +1,38 @@
 <script setup>
-  // Import the components
-  import Navbar from './components/Navbar.vue';
-  import LoginModal from './components/LoginModal.vue';
-  import CookieBanner from './components/CookieBanner.vue';
-  import GoogleOneTap from './components/GoogleOneTap.vue';
+import Navbar from './components/Navbar.vue';
+import Footer from './components/Footer.vue';
+import LoginModal from './components/LoginModal.vue';
+// 1. IMPORT IS HERE (This was correct)
+import Chatbot from './components/Chatbot.vue'; 
+import CookieBanner from './components/CookieBanner.vue';
+import GoogleOneTap from './components/GoogleOneTap.vue';
 </script>
 
 <template>
-  <Navbar />
-  <router-view></router-view>
+  <div class="app-wrapper">
+    <Navbar />
 
-  <LoginModal />
-  <CookieBanner />
-  <GoogleOneTap />
+    <router-view v-slot="{ Component }">
+      <transition name="fade" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
+
+    <Footer />
+    
+    <LoginModal />
+    <CookieBanner />
+    <GoogleOneTap />
+    
+    <Chatbot /> 
+    
+  </div>
 </template>
+
+<style>
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+</style>

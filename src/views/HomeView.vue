@@ -1,22 +1,24 @@
 <script setup>
-  import Navbar from '../components/Navbar.vue';
-  import Hero from '../components/Hero.vue';
-  import About from '../components/About.vue';
-  import Values from '../components/Values.vue';
-  import Services from '../components/Services.vue';
-  import Clients from '../components/Clients.vue';
-  import Contact from '../components/Contact.vue';
- 
-  
-
+import Hero from '../components/Hero.vue';
+import MissionVision from '../components/MissionVision.vue';
+import Industries from '../components/Industries.vue';
+import CaseStudies from '../components/CaseStudies.vue'; // <--- 1. Import it
+import OrgStructure from '../components/OrgStructure.vue';
+import Clients from '../components/Clients.vue';
+import Services from '../components/Services.vue';
+import About from '../components/About.vue';
 </script>
 
 <template>
-  <Navbar />
-  <Hero />
-  <About />
-  <Values />
-  <Services />
-  <Clients />
-  <Contact />
+  <main>
+    <Hero />
+    <MissionVision />
+    <Industries />
+    
+    <CaseStudies /> 
+    
+    <OrgStructure />
+    <Clients />
+    <About /> <Services />
+  </main>
 </template>

@@ -2,39 +2,65 @@
 import { ref } from 'vue';
 import { store } from '../store';
 import { auth, googleProvider } from '../firebase';
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  updateProfile 
+} from 'firebase/auth';
+import { useRouter } from 'vue-router'; 
 
-const isLogin = ref(true);
+const router = useRouter(); 
+
+// Form Data
 const email = ref('');
 const password = ref('');
-const errorMessage = ref('');
+const errorMessage = ref(''); // Fixed name match
+const isLogin = ref(true);    // Fixed missing toggle state
 
-const handleSuccess = (user) => {
-  store.user = user; // Update global user state
-  store.closeModal(); // Close the popup so they can continue
-  errorMessage.value = '';
+// 1. Unified Form Handler (Matches @submit.prevent="handleSubmit")
+const handleSubmit = async () => {
+    errorMessage.value = '';
+
+    // A. CHECK FOR ADMIN LOGIN (Only works in Login Mode)
+    if (isLogin.value && email.value === "feisaldindi4@gmail.com" && password.value === "Admin123") {
+        store.loginAdmin();
+        store.closeModal();
+        router.push('/admin'); 
+        return;
+    }
+
+    // B. NORMAL FIREBASE LOGIC
+    try {
+        if (isLogin.value) {
+            // Login
+            await signInWithEmailAndPassword(auth, email.value, password.value);
+        } else {
+            // Sign Up
+            const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value);
+            // Optional: Set a default name based on email
+            await updateProfile(userCredential.user, {
+                displayName: email.value.split('@')[0]
+            });
+        }
+        // Success -> Close Modal
+        store.closeModal();
+    } catch (error) {
+        console.error(error);
+        if (error.code === 'auth/wrong-password') errorMessage.value = "Incorrect password.";
+        else if (error.code === 'auth/user-not-found') errorMessage.value = "No account found with this email.";
+        else if (error.code === 'auth/email-already-in-use') errorMessage.value = "Email already in use. Please log in.";
+        else errorMessage.value = "Authentication failed. Please try again.";
+    }
 };
 
+// 2. Google Handler (Matches @click="handleGoogle")
 const handleGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    handleSuccess(result.user);
+    await signInWithPopup(auth, googleProvider);
+    store.closeModal();
   } catch (error) {
-    errorMessage.value = error.message;
-  }
-};
-
-const handleSubmit = async () => {
-  try {
-    let result;
-    if (isLogin.value) {
-      result = await signInWithEmailAndPassword(auth, email.value, password.value);
-    } else {
-      result = await createUserWithEmailAndPassword(auth, email.value, password.value);
-    }
-    handleSuccess(result.user);
-  } catch (error) {
-    errorMessage.value = error.message;
+    errorMessage.value = "Google sign-in failed.";
   }
 };
 </script>
@@ -78,23 +104,19 @@ const handleSubmit = async () => {
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.4); /* Slight dark tint */
-  backdrop-filter: blur(4px); /* Blur the website behind it */
+  background: rgba(0, 0, 0, 0.4); 
+  backdrop-filter: blur(4px); 
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10000;
 }
 
-/* 2. The Glass Card (The Logic) */
+/* 2. The Glass Card */
 .glass-card {
-  /* Semi-transparent Navy Blue */
   background: rgba(26, 43, 73, 0.75); 
-  
-  /* The Glass Blur Effect */
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
   padding: 40px;
@@ -105,7 +127,6 @@ const handleSubmit = async () => {
   text-align: center;
 }
 
-/* 3. Inputs & Buttons */
 .glass-input {
   width: 100%;
   background: rgba(255, 255, 255, 0.1);
@@ -115,7 +136,6 @@ const handleSubmit = async () => {
   color: white;
   outline: none;
 }
-
 .glass-input::placeholder { color: rgba(255, 255, 255, 0.6); }
 .glass-input:focus { background: rgba(255, 255, 255, 0.2); border-color: white; }
 
@@ -129,7 +149,6 @@ const handleSubmit = async () => {
   border-radius: 8px;
   transition: transform 0.2s;
 }
-
 .submit-btn:hover { transform: scale(1.02); }
 
 .social-btn {
@@ -155,7 +174,6 @@ const handleSubmit = async () => {
   font-size: 1.5rem;
 }
 .close-btn:hover { color: white; }
-
 .pointer { cursor: pointer; text-decoration: underline; }
 .error-msg { color: #ff9999; font-size: 0.85rem; margin-bottom: 10px; }
 </style>
