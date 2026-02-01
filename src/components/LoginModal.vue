@@ -2,12 +2,7 @@
 import { ref } from 'vue';
 import { store } from '../store';
 import { auth, googleProvider } from '../firebase';
-import { 
-  signInWithPopup, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  updateProfile 
-} from 'firebase/auth';
+import { signInWithPopup } from 'firebase/auth';
 import { useRouter } from 'vue-router'; 
 
 const router = useRouter(); 
@@ -15,50 +10,46 @@ const router = useRouter();
 // Form Data
 const email = ref('');
 const password = ref('');
-const errorMessage = ref(''); // Fixed name match
-const isLogin = ref(true);    // Fixed missing toggle state
+const errorMessage = ref(''); 
+const isLogin = ref(true);
 
-// 1. Unified Form Handler (Matches @submit.prevent="handleSubmit")
+// 1. Unified Form Handler
 const handleSubmit = async () => {
     errorMessage.value = '';
 
-    // A. CHECK FOR ADMIN LOGIN (Only works in Login Mode)
-    if (isLogin.value && email.value === "feisaldindi4@gmail.com" && password.value === "Admin123") {
-        store.loginAdmin();
-        store.closeModal();
-        router.push('/admin'); 
-        return;
-    }
+    // A. USE THE STORE FOR LOGIN (Handles Admin & Client)
+    // This calls the logic we just added to store.js
+    const success = store.login(email.value, password.value);
 
-    // B. NORMAL FIREBASE LOGIC
-    try {
-        if (isLogin.value) {
-            // Login
-            await signInWithEmailAndPassword(auth, email.value, password.value);
-        } else {
-            // Sign Up
-            const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value);
-            // Optional: Set a default name based on email
-            await updateProfile(userCredential.user, {
-                displayName: email.value.split('@')[0]
-            });
-        }
-        // Success -> Close Modal
+    if (success) {
+        // Login Successful!
         store.closeModal();
-    } catch (error) {
-        console.error(error);
-        if (error.code === 'auth/wrong-password') errorMessage.value = "Incorrect password.";
-        else if (error.code === 'auth/user-not-found') errorMessage.value = "No account found with this email.";
-        else if (error.code === 'auth/email-already-in-use') errorMessage.value = "Email already in use. Please log in.";
-        else errorMessage.value = "Authentication failed. Please try again.";
+
+        // Check Role and Redirect
+        if (store.isAdmin) {
+            router.push('/admin'); // Go to Admin Dashboard
+        } else {
+            router.push('/dashboard'); // Go to User Dashboard
+        }
+    } else {
+        // B. FALLBACK / ERROR
+        // If store login failed, show error (or handle Firebase creation here if needed)
+        if (isLogin.value) {
+            errorMessage.value = "Invalid email or password.";
+        } else {
+            // Placeholder for sign-up logic if you want to allow new users
+             errorMessage.value = "Public sign-up is currently disabled. Please contact admin.";
+        }
     }
 };
 
-// 2. Google Handler (Matches @click="handleGoogle")
+// 2. Google Handler
 const handleGoogle = async () => {
   try {
     await signInWithPopup(auth, googleProvider);
     store.closeModal();
+    // Google users default to client dashboard
+    router.push('/dashboard');
   } catch (error) {
     errorMessage.value = "Google sign-in failed.";
   }

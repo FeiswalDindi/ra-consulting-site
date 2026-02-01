@@ -111,4 +111,11 @@ const navigateTo = (path) => {
     border: 3px solid #fff;
     box-shadow: 0 4px 10px rgba(26, 43, 73, 0.1);
 }
+/* Fix for mobile menu overlap */
+@media (max-width: 991px) {
+    .sticky-top {
+        position: static !important; /* Disable sticky on mobile */
+        z-index: 1; /* Ensure it's below the navbar */
+    }
+}
 </style>
