@@ -7,49 +7,38 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter(); 
 
-// Form Data
 const email = ref('');
 const password = ref('');
 const errorMessage = ref(''); 
 const isLogin = ref(true);
 
-// 1. Unified Form Handler
 const handleSubmit = async () => {
     errorMessage.value = '';
-
-    // A. USE THE STORE FOR LOGIN (Handles Admin & Client)
-    // This calls the logic we just added to store.js
+    
+    // 1. Attempt Login
     const success = store.login(email.value, password.value);
 
     if (success) {
-        // Login Successful!
         store.closeModal();
 
-        // Check Role and Redirect
+        // 2. THE FIX: Conditional Redirect
         if (store.isAdmin) {
-            router.push('/admin'); // Go to Admin Dashboard
+            // If it's YOU (Admin), go straight to the control panel
+            router.push('/admin');
         } else {
-            router.push('/dashboard'); // Go to User Dashboard
+            // If it's a Client, stay on the current page (as requested)
+            console.log("Client logged in, staying on page.");
         }
     } else {
-        // B. FALLBACK / ERROR
-        // If store login failed, show error (or handle Firebase creation here if needed)
-        if (isLogin.value) {
-            errorMessage.value = "Invalid email or password.";
-        } else {
-            // Placeholder for sign-up logic if you want to allow new users
-             errorMessage.value = "Public sign-up is currently disabled. Please contact admin.";
-        }
+        errorMessage.value = "Invalid email or password.";
     }
 };
 
-// 2. Google Handler
 const handleGoogle = async () => {
   try {
     await signInWithPopup(auth, googleProvider);
     store.closeModal();
-    // Google users default to client dashboard
-    router.push('/dashboard');
+    // Google users are Clients, so they stay on the page
   } catch (error) {
     errorMessage.value = "Google sign-in failed.";
   }
@@ -91,78 +80,36 @@ const handleGoogle = async () => {
 </template>
 
 <style scoped>
-/* 1. The Dark Overlay */
 .modal-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.4); 
-  backdrop-filter: blur(4px); 
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); 
+  display: flex; justify-content: center; align-items: center; z-index: 10000;
 }
-
-/* 2. The Glass Card */
 .glass-card {
-  background: rgba(26, 43, 73, 0.75); 
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 40px;
-  width: 90%;
-  max-width: 420px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  position: relative;
-  text-align: center;
+  background: rgba(26, 43, 73, 0.75); backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px;
+  padding: 40px; width: 90%; max-width: 420px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); position: relative; text-align: center;
 }
-
 .glass-input {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 12px;
-  border-radius: 8px;
-  color: white;
-  outline: none;
+  width: 100%; background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2); padding: 12px;
+  border-radius: 8px; color: white; outline: none;
 }
 .glass-input::placeholder { color: rgba(255, 255, 255, 0.6); }
-.glass-input:focus { background: rgba(255, 255, 255, 0.2); border-color: white; }
-
 .submit-btn {
-  width: 100%;
-  padding: 12px;
-  background: #ffffff;
-  color: #1a2b49;
-  font-weight: bold;
-  border: none;
-  border-radius: 8px;
-  transition: transform 0.2s;
+  width: 100%; padding: 12px; background: #ffffff; color: #1a2b49;
+  font-weight: bold; border: none; border-radius: 8px; transition: transform 0.2s;
 }
 .submit-btn:hover { transform: scale(1.02); }
-
 .social-btn {
-  width: 100%;
-  background: white;
-  border: none;
-  padding: 10px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-weight: 600;
-  color: #333;
+  width: 100%; background: white; border: none; padding: 10px;
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  gap: 10px; font-weight: 600; color: #333;
 }
-
 .close-btn {
-  position: absolute;
-  top: 15px; right: 20px;
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 1.5rem;
+  position: absolute; top: 15px; right: 20px; background: none;
+  border: none; color: rgba(255, 255, 255, 0.6); font-size: 1.5rem;
 }
 .close-btn:hover { color: white; }
 .pointer { cursor: pointer; text-decoration: underline; }

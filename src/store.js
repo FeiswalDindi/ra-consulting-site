@@ -30,6 +30,7 @@ export const store = reactive({
   // Initialize user from local storage so we don't lose them on refresh
   user: loadUser(),         
   isLoginModalOpen: false,
+  isLogoutModalOpen: false,
   isAdmin: loadUser()?.role === 'admin', // Auto-set admin status
 
   // --- CONTENT ---
@@ -92,9 +93,19 @@ export const store = reactive({
     return false;
   },
   
-  logout() {
-      this.user = null;
-      this.isAdmin = false;
-      localStorage.removeItem(USER_KEY); // Clear storage
-  }
+logout() {
+    // 1. Wipe the reactive state
+    this.user = null;
+    this.currentUser = null; // Sync both aliases
+    this.isAdmin = false;
+
+    // 2. Wipe the browser memory
+    localStorage.removeItem('ra_user_session'); 
+    
+    // 3. (Optional) Wipe content cache if you want a total reset
+    // localStorage.removeItem('ra_site_content');
+
+    console.log("Store: User session cleared.");
+}
+  
 });

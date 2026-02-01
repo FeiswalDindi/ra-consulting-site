@@ -6,6 +6,7 @@ import LoginModal from './components/LoginModal.vue';
 import Chatbot from './components/Chatbot.vue'; 
 import CookieBanner from './components/CookieBanner.vue';
 import GoogleOneTap from './components/GoogleOneTap.vue';
+import LogoutModal from './components/LogoutModal.vue';
 </script>
 
 <template>
@@ -21,6 +22,7 @@ import GoogleOneTap from './components/GoogleOneTap.vue';
     <Footer />
     
     <LoginModal />
+    <LogoutModal />
     <CookieBanner />
     <GoogleOneTap />
     

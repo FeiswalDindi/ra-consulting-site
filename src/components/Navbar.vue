@@ -167,11 +167,7 @@ onUnmounted(() => {
                   <span class="d-block fw-bold text-dark">{{ userData.displayName || 'Valued Client' }}</span>
                   <span class="d-block small text-muted">{{ userData.email }}</span>
               </li>
-              <li v-if="store.isAdmin">
-                <router-link class="dropdown-item d-flex align-items-center gap-2" to="/admin" @click="closeMenu">
-                  <span>📊</span> Master Dashboard
-                </router-link>
-              </li>
+
               <li><router-link class="dropdown-item d-flex align-items-center gap-2" to="/dashboard" @click="closeMenu"><span>👤</span> My Profile</router-link></li>
               <li><hr class="dropdown-divider"></li>
               <li>
