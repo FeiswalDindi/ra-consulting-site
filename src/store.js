@@ -1,22 +1,20 @@
 import { reactive } from 'vue';
 
-// Load saved content from LocalStorage (if any), otherwise use defaults
+// 1. Load saved content from LocalStorage (if any)
 const savedContent = JSON.parse(localStorage.getItem('siteContent'));
 
 export const store = reactive({
-  // 1. User State
-  user: null,
+  // --- USER STATE ---
+  user: null,         // Used by Navbar
+  currentUser: null,  // Alias for compatibility
   isLoginModalOpen: false,
-  
-  // 2. Admin State
   isAdmin: false, 
 
-  // 3. EDITABLE WEBSITE CONTENT (The "Superpower")
-// ... imports and user state ...
-
-  // 3. EDITABLE WEBSITE CONTENT
+  // --- EDITABLE WEBSITE CONTENT ---
+  // If we have saved content, use it. Otherwise, use these defaults.
   content: savedContent || {
-    // HERO CAROUSEL DATA (New)
+    
+    // 1. HERO SLIDER
     heroSlides: [
       {
         id: 1,
@@ -37,19 +35,45 @@ export const store = reactive({
         subtitle: 'Evidence-based studies for the Eastern Africa region.'
       }
     ],
-    // Default Hero Text (Fallback)
+
+    // 2. HERO BUTTONS
     hero: {
       buttonText: 'Explore Our Services'
     },
+
+    // 3. ABOUT TEXT
     about: {
       title: 'Who We Are',
-      text: 'RA Strategic & Analytics Consulting Ltd is a multidisciplinary advisory firm...'
-    }
+      text: 'RA Strategic & Analytics Consulting Ltd is a multidisciplinary advisory firm offering comprehensive solutions in strategy, research, and technology.'
+    },
+
+    // 4. SOCIAL MEDIA UPDATES (The New Superpower!)
+    socialUpdates: [
+        {
+            id: 1,
+            platform: 'LinkedIn',
+            date: '2 Days Ago',
+            text: 'We are thrilled to announce our partnership with Africa Nazarene University.',
+            link: '#'
+        },
+        {
+            id: 2,
+            platform: 'Twitter (X)',
+            date: '5 Days Ago',
+            text: 'New Report Alert: The 2026 Digital Transformation Outlook is live.',
+            link: '#'
+        },
+        {
+            id: 3,
+            platform: 'Facebook',
+            date: '1 Week Ago',
+            text: 'Highlights from our team building and community outreach event in Nairobi.',
+            link: '#'
+        }
+    ]
   },
 
-  // ... (keep actions, saveContent, loginAdmin logic the same)
-
-  // Actions
+  // --- ACTIONS ---
   openModal() {
     this.isLoginModalOpen = true;
   },
@@ -57,20 +81,50 @@ export const store = reactive({
     this.isLoginModalOpen = false;
   },
   
-  // Save changes to browser memory (Simulating a database)
+  // Save changes to browser memory
   saveContent() {
     localStorage.setItem('siteContent', JSON.stringify(this.content));
-    alert('Website content updated successfully!');
+    // Also update the alias
+    if(this.user) this.currentUser = this.user;
   },
 
   // Admin Login Logic
   loginAdmin() {
     this.isAdmin = true;
-    // We create a fake "User" object so the Navbar treats us as logged in
     this.user = {
       displayName: 'System Administrator',
       email: 'feisaldindi4@gmail.com',
-      photoURL: null // No photo for super admin
+      photoURL: null 
     };
+    this.currentUser = this.user; // Sync alias
   }
 });
+
+// --- SAFETY PATCH ---
+// This runs immediately. If the user has old data saved in their browser
+// that is missing the 'socialUpdates' array, we add it now so the site doesn't crash.
+if (store.content && !store.content.socialUpdates) {
+    store.content.socialUpdates = [
+        {
+            id: 1,
+            platform: 'LinkedIn',
+            date: '2 Days Ago',
+            text: 'Welcome to our new website! Follow us for updates.',
+            link: '#'
+        },
+        {
+            id: 2,
+            platform: 'Twitter (X)',
+            date: 'Just Now',
+            text: 'RA Consulting is now live. Check out our latest insights.',
+            link: '#'
+        },
+        {
+            id: 3,
+            platform: 'Facebook',
+            date: '1 Week Ago',
+            text: 'Empowering institutions across Eastern Africa.',
+            link: '#'
+        }
+    ];
+}

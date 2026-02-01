@@ -3,13 +3,16 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { store } from '../store';
 import { auth } from '../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { useRouter } from 'vue-router'; 
 
 import logoImg from '../assets/logo.png'; 
 
+const router = useRouter();
 const isScrolled = ref(false);
 const isLoggedIn = ref(false);
 const userData = ref(null);
 const isMenuOpen = ref(false);
+const navbarRef = ref(null); // Reference to track clicks inside navbar
 
 // --- AUTH LOGIC ---
 onAuthStateChanged(auth, (user) => {
@@ -28,6 +31,7 @@ const userInitial = computed(() => {
 const handleAuthClick = async () => {
   if (isLoggedIn.value) {
     await signOut(auth);
+    router.push('/'); 
   } else {
     store.openModal();
   }
@@ -36,12 +40,15 @@ const handleAuthClick = async () => {
 
 // --- SCROLL LOGIC ---
 const handleScroll = () => {
-  // 1. Handle Glass Effect
   isScrolled.value = window.scrollY > 20;
+  // NOTE: We do NOT auto-close menu here anymore, to prevent it disappearing when you try to scroll the list itself.
+};
 
-  // 2. Auto-close menu on scroll
-  if (isMenuOpen.value) {
-    isMenuOpen.value = false;
+// --- CLICK OUTSIDE LOGIC (NEW) ---
+const handleClickOutside = (event) => {
+  // If menu is open AND the click is NOT inside the navbar...
+  if (isMenuOpen.value && navbarRef.value && !navbarRef.value.contains(event.target)) {
+    closeMenu();
   }
 };
 
@@ -55,21 +62,25 @@ const closeMenu = () => {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
+  document.addEventListener('click', handleClickOutside); // Listen for clicks anywhere
 });
+
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
+  document.removeEventListener('click', handleClickOutside);
 });
 </script>
 
 <template>
   <nav 
+    ref="navbarRef"
     class="navbar navbar-expand-lg navbar-dark fixed-top transition-navbar"
     :class="{ 'glass-nav': isScrolled, 'bg-solid': !isScrolled }"
   >
     <div class="container position-relative">
       
       <router-link class="navbar-brand fw-bold brand-container" to="/" @click="closeMenu">
-        <span class="brand-text" :class="{ 'hide-text': isScrolled }">RA Consulting</span>
+        <span class="brand-text" :class="isScrolled ? 'text-navy' : 'text-white'">RA Consulting</span>
         <img 
             :src="logoImg" 
             alt="RA Logo" 
@@ -95,81 +106,58 @@ onUnmounted(() => {
         <ul class="navbar-nav ms-auto align-items-center gap-3">
           
           <li class="nav-item">
-            <router-link class="nav-link" to="/" @click="closeMenu">Home</router-link>
+            <router-link class="nav-link" :class="isScrolled ? 'text-navy' : 'text-white'" to="/" @click="closeMenu">Home</router-link>
           </li>
           
           <li class="nav-item">
-            <router-link class="nav-link" to="/about" @click="closeMenu">About Us</router-link>
+            <router-link class="nav-link" :class="isScrolled ? 'text-navy' : 'text-white'" to="/about" @click="closeMenu">About Us</router-link>
           </li>
 
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" :class="isScrolled ? 'text-navy' : 'text-white'" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Services
             </a>
             <ul class="dropdown-menu border-0 shadow-lg p-3 rounded-3">
-              <li>
-                <router-link class="dropdown-item" to="/services/research" @click="closeMenu">
-                  Research & Policy
-                </router-link>
-              </li>
-              <li>
-                <router-link class="dropdown-item" to="/services/ict" @click="closeMenu">
-                  ICT & Data Analytics
-                </router-link>
-              </li>
-              <li>
-                <router-link class="dropdown-item" to="/services/strategy" @click="closeMenu">
-                  Strategic Advisory
-                </router-link>
-              </li>
+              <li><router-link class="dropdown-item" to="/services/research" @click="closeMenu">Research & Policy</router-link></li>
+              <li><router-link class="dropdown-item" to="/services/ict" @click="closeMenu">ICT & Data Analytics</router-link></li>
+              <li><router-link class="dropdown-item" to="/services/strategy" @click="closeMenu">Strategic Advisory</router-link></li>
               <li><hr class="dropdown-divider"></li>
-              <li>
-                <router-link class="dropdown-item fw-bold text-primary" to="/services" @click="closeMenu">
-                  View All Services
-                </router-link>
-              </li>
+              <li><router-link class="dropdown-item fw-bold text-primary" to="/services" @click="closeMenu">View All Services</router-link></li>
             </ul>
           </li>
 
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" :class="isScrolled ? 'text-navy' : 'text-white'" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Work With Us
             </a>
             <ul class="dropdown-menu border-0 shadow-lg p-3 rounded-3">
-              <li>
-                <router-link class="dropdown-item" to="/careers" @click="closeMenu">
-                  Careers & Internships
-                </router-link>
-              </li>
-              <li>
-                <router-link class="dropdown-item" to="/partners" @click="closeMenu">
-                  Become a Partner
-                </router-link>
-              </li>
+              <li><router-link class="dropdown-item" to="/careers" @click="closeMenu">Careers & Internships</router-link></li>
+              <li><router-link class="dropdown-item" to="/partners" @click="closeMenu">Become a Partner</router-link></li>
             </ul>
           </li>
 
           <li class="nav-item">
-            <router-link class="nav-link" to="/insights" @click="closeMenu">Insights</router-link>
+            <router-link class="nav-link" :class="isScrolled ? 'text-navy' : 'text-white'" to="/insights" @click="closeMenu">Insights</router-link>
           </li>
 
           <li class="nav-item">
-            <router-link class="nav-link" to="/contact" @click="closeMenu">Contact Us</router-link>
+            <router-link class="nav-link" :class="isScrolled ? 'text-navy' : 'text-white'" to="/contact" @click="closeMenu">Contact Us</router-link>
           </li>
           
           <li class="nav-item dropdown auth-item" v-if="isLoggedIn && userData">
             <a 
               class="nav-link dropdown-toggle d-flex align-items-center gap-2" 
+              :class="isScrolled ? 'text-navy' : 'text-white'"
               href="#" 
               role="button" 
               data-bs-toggle="dropdown" 
               aria-expanded="false"
             >
-              <div class="user-avatar-small">
+              <div class="user-avatar-small" :class="isScrolled ? 'border-navy' : 'border-white'">
                  <img v-if="userData.photoURL" :src="userData.photoURL" alt="User">
                  <span v-else class="initial-small">{{ userInitial }}</span>
               </div>
-              <span class="d-none d-lg-block fw-bold small text-light">
+              <span class="d-none d-lg-block fw-bold small">
                   {{ userData.displayName || 'User' }}
               </span>
             </a>
@@ -179,23 +167,20 @@ onUnmounted(() => {
                   <span class="d-block fw-bold text-dark">{{ userData.displayName || 'Valued Client' }}</span>
                   <span class="d-block small text-muted">{{ userData.email }}</span>
               </li>
-              <li>
-                <router-link class="dropdown-item d-flex align-items-center gap-2" to="/dashboard" @click="closeMenu">
-                  <span>📊</span> My Dashboard
+              <li v-if="store.isAdmin">
+                <router-link class="dropdown-item d-flex align-items-center gap-2" to="/admin" @click="closeMenu">
+                  <span>📊</span> Master Dashboard
                 </router-link>
               </li>
-              <li>
-                <a class="dropdown-item d-flex align-items-center gap-2" href="#" @click.prevent>
-                   <span>⚙️</span> Settings
-                </a>
-              </li>
+              <li><router-link class="dropdown-item d-flex align-items-center gap-2" to="/dashboard" @click="closeMenu"><span>👤</span> My Profile</router-link></li>
               <li><hr class="dropdown-divider"></li>
               <li>
-                <button 
-                  @click="handleAuthClick" 
-                  class="dropdown-item text-danger fw-bold d-flex align-items-center gap-2"
-                >
-                  <span>🚪</span> Log Out
+                <button @click="handleAuthClick" class="dropdown-item fw-bold d-flex align-items-center gap-2 text-navy">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2H2v9h8v-2a.5.5 0 0 1 1 0v2z"/>
+                      <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                   </svg>
+                   Log Out
                 </button>
               </li>
             </ul>
@@ -211,8 +196,6 @@ onUnmounted(() => {
             </button>
           </li>
 
-          
-
         </ul>
       </div>
     </div>
@@ -220,13 +203,21 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* --- DROPDOWN STYLES (NEW) --- */
-.dropdown-menu {
-    margin-top: 15px; /* Spacing from navbar */
-    background: #fff;
-    border: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15); /* Soft shadow */
-    animation: fadeInUp 0.3s ease;
+/* --- UTILS --- */
+.text-navy { color: #1a2b49 !important; }
+.text-white { color: white !important; }
+.border-navy { border: 2px solid #1a2b49; }
+.border-white { border: 2px solid rgba(255,255,255,0.8); }
+
+/* --- DROPDOWN (Desktop Default) --- */
+@media (min-width: 992px) {
+  .dropdown-menu {
+      margin-top: 15px; 
+      background: #fff;
+      border: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+      animation: fadeInUp 0.3s ease;
+  }
 }
 
 .dropdown-item {
@@ -236,182 +227,111 @@ onUnmounted(() => {
     color: #495057;
     transition: all 0.2s ease;
 }
-
 .dropdown-item:hover {
     background-color: #f8f9fa;
-    color: #1a2b49; /* Navy Blue on hover */
-    padding-left: 20px; /* Slight slide effect */
+    color: #1a2b49; 
+    padding-left: 20px; 
 }
 
-/* Animation for dropdown */
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- STATE 2: SCROLLED (Light Glassy Background) --- */
+/* --- STATE 2: SCROLLED (Glassy White) --- */
 .glass-nav {
-    background-color: rgba(226, 229, 236, 0.85) !important; 
-    backdrop-filter: blur(8px); 
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(1px); 
     -webkit-backdrop-filter: blur(8px);
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
 }
+.glass-nav .navbar-toggler-icon { filter: invert(1); }
 
-/* --- INTEGRATED TEXT TRANSITIONS --- */
-.glass-nav .nav-link {
-    color: #1a2b49 !important;
-    font-weight: 500;
-}
-
-.glass-nav .nav-link:hover {
-    color: #0d6efd !important; 
-}
-
-.glass-nav .auth-btn {
-    border-color: #1a2b49 !important;
-    color: #1a2b49 !important;
-}
-
-.glass-nav .auth-btn:hover {
-    background-color: #1a2b49 !important;
-    color: white !important;
-}
-
-.glass-nav .navbar-toggler-icon {
-    filter: invert(1);
-}
-
-/* --- BASE TRANSITIONS --- */
-.transition-navbar {
-    transition: all 0.4s ease-in-out;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-}
-
-/* --- STATE 1: TOP OF PAGE --- */
+/* --- STATE 1: TOP OF PAGE (Solid Navy) --- */
 .bg-solid {
     background-color: #1a2b49; 
     box-shadow: none;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
 }
+.bg-solid .navbar-toggler-icon { filter: invert(0); }
 
-/* --- BRAND ANIMATION --- */
+/* --- BRAND --- */
 .brand-container {
     position: relative;
-    display: flex;
-    align-items: center;
-    height: 40px;
-    min-width: 180px; 
-    overflow: hidden;
+    display: flex; align-items: center;
+    height: 40px; min-width: 180px; overflow: hidden;
 }
-
 .brand-text {
     font-size: 1.5rem;
     transition: all 0.4s ease-in-out;
     position: absolute; left: 0; top: 50%;
     transform: translateY(-50%);
 }
-
-.hide-text { opacity: 0; transform: translateY(-150%); }
-
 .brand-logo {
-    position: absolute; left: 0;
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid white;
-    opacity: 0;
+    position: absolute; left: 0; width: 40px; height: 40px;
+    border-radius: 50%; object-fit: cover; opacity: 0;
     transform: translateY(150%);
     transition: all 0.4s ease-in-out;
 }
-
 .show-logo { opacity: 1; transform: translateY(0); }
 
 /* --- USER AVATAR --- */
-.user-avatar {
-    width: 36px; height: 36px;
-    border-radius: 50%; overflow: hidden;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    display: flex; align-items: center; justify-content: center;
-    background: #1a2b49;
-}
-.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.initial { color: white; font-weight: bold; }
-.auth-btn { border-radius: 20px; }
-
-/* --- CUSTOM MOBILE FLOATING MENU --- */
-@media (max-width: 991px) {
-    .custom-mobile-menu {
-        position: absolute;
-        top: 100%;
-        right: 0;
-        width: 280px; /* Slightly wider for dropdown */
-        background: rgba(26, 43, 73, 0.95);
-        backdrop-filter: blur(10px);
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        margin-top: 10px; 
-    }
-
-    .navbar-nav .nav-link {
-        padding: 10px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        text-align: center;
-        color: white !important;
-    }
-    
-    .navbar-nav .nav-link:last-child { border-bottom: none; }
-    
-    .auth-item {
-        justify-content: center;
-        margin-top: 10px;
-    }
-    
-    /* Mobile Dropdown Fixes */
-    .dropdown-menu {
-        background: rgba(255, 255, 255, 0.1);
-        border: none;
-        text-align: center;
-    }
-    .dropdown-item {
-        color: rgba(255, 255, 255, 0.8) !important;
-    }
-    .dropdown-item:hover {
-        background: rgba(255, 255, 255, 0.2);
-        color: white !important;
-    }
-}
-
-/* Small Avatar for Navbar */
 .user-avatar-small {
     width: 32px; height: 32px;
     border-radius: 50%; overflow: hidden;
-    background: #1a2b49; border: 2px solid rgba(255,255,255,0.8);
+    background: #1a2b49; 
     display: flex; align-items: center; justify-content: center;
 }
 .user-avatar-small img { width: 100%; height: 100%; object-fit: cover; }
 .initial-small { color: white; font-size: 0.8rem; font-weight: bold; }
 
-/* Dropdown Tweaks */
-.dropdown-menu-end { right: 0; left: auto; }
+/* --- CUSTOM MOBILE MENU (The Fixes) --- */
+@media (max-width: 991px) {
+    .custom-mobile-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        width: 300px; 
+        background-color: #1a2b49 !important; /* Always Navy */
+        border: 1px solid rgba(255,255,255,0.1);
+        
+        /* SCROLL FIX */
+        max-height: 85vh; 
+        overflow-y: auto; 
+        
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        margin-top: 10px; 
+    }
 
-/* Update your existing .navbar class with these specific properties */
-.navbar {
-  transition: all 0.4s ease-in-out;
-  padding: 1rem 0;
-  width: 100%;
-  top: 0;
-  z-index: 1000;
-  
-  /* --- THE FLICKER FIX --- */
-  -webkit-transform: translateZ(0); /* Promotes to hardware acceleration */
-  transform: translateZ(0); 
-  backface-visibility: hidden;      /* Prevents micro-stuttering */
+    .nav-link { color: rgba(255,255,255,0.95) !important; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .nav-link:hover { color: white !important; }
+    
+    .auth-item { justify-content: center; margin-top: 10px; }
+    
+    /* DISTINCT MOBILE DROPDOWN (White Box on Navy BG) */
+    .dropdown-menu {
+        background: #ffffff !important; /* Solid White */
+        border: none;
+        text-align: center;
+        border-radius: 8px;
+        padding: 10px;
+        margin-top: 5px;
+    }
+    .dropdown-item { 
+        color: #1a2b49 !important; /* Navy Text */
+        font-weight: 600;
+    }
+    .dropdown-item:hover { 
+        background: #e9ecef !important; /* Light Grey Hover */
+        color: #1a2b49 !important; 
+    }
 }
 
-/* Keep your existing .scrolled-nav styles... */
+.transition-navbar { transition: all 0.4s ease-in-out; width: 100%; top: 0; z-index: 1000; -webkit-transform: translateZ(0); transform: translateZ(0); backface-visibility: hidden; }
 </style>

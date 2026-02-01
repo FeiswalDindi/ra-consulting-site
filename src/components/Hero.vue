@@ -68,17 +68,19 @@ onUnmounted(() => {
                   </div>
                 </transition>
                 
-                <div class="d-flex justify-content-center gap-3 animate-buttons">
-                    
-                    <router-link to="/services" class="btn btn-light btn-lg px-5 py-3 rounded-pill fw-bold text-primary shadow-lg">
-                        {{ store.content.hero.buttonText }}
-                    </router-link>
-                    
-                    <router-link to="/contact" class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill fw-bold">
-                        Partner With Us
-                    </router-link>
+                  <div class="d-flex flex-column flex-md-row justify-content-center gap-3 animate-buttons w-100 px-4 px-md-0">
+    
+    <router-link to="/services" class="btn btn-light btn-lg px-5 py-3 rounded-pill fw-bold text-primary shadow-lg w-sm-100">
+        {{ store.content.hero.buttonText }}
+    </router-link>
+    
+    <router-link to="/contact" class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill fw-bold w-sm-100">
+        Partner With Us
+    </router-link>
 
-                </div>
+</div>
+
+                
 
                 <div class="d-flex justify-content-center gap-2 mt-5">
                   <span 
@@ -139,4 +141,19 @@ onUnmounted(() => {
   transition: all 0.3s;
 }
 .dot.active { background: white; transform: scale(1.2); }
+
+.chat-toggle {
+    height: 60px;
+    min-width: 60px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background-color: #1a2b49;
+    border: 2px solid white;
+    overflow: hidden;
+}
+
+.chat-toggle.expanded {
+    width: auto; /* Allow it to grow */
+    padding-left: 15px;
+    padding-right: 15px;
+}
 </style>
