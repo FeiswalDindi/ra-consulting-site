@@ -100,20 +100,30 @@ const handleUpload = () => {
         if (uploadProgress.value >= 100) {
             clearInterval(interval);
             
+            // --- 1. SMART SIZE CALCULATION (The Fix) ---
+            const bytes = selectedFile.value.size;
+            let displaySize = '';
+
+            if (bytes < 1024 * 1024) {
+                // If less than 1MB, show KB (e.g., "15 KB")
+                displaySize = (bytes / 1024).toFixed(0) + ' KB';
+            } else {
+                // If 1MB or more, show MB (e.g., "2.4 MB")
+                displaySize = (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+
             // Create Resource Object
             const newResource = {
                 id: Date.now(),
                 title: newFileName.value,
                 fileName: selectedFile.value.name, 
                 type: selectedFile.value.name.split('.').pop().toUpperCase(),
-                size: (selectedFile.value.size / (1024*1024)).toFixed(1) + ' MB',
+                size: displaySize, // Use our new smart size
                 status: 'Available'
             };
 
             // Add directly to store (Live Action)
-            if(!store.content.resources) store.content.resources = [];
-            store.content.resources.unshift(newResource);
-            store.saveContent();
+            store.addResource(newResource);
             
             // Reset Form
             isUploading.value = false;
@@ -126,8 +136,7 @@ const handleUpload = () => {
 
 const deleteResource = (index) => {
     if(confirm("Are you sure? This will remove access for all clients immediately.")) {
-        store.content.resources.splice(index, 1);
-        store.saveContent();
+        store.deleteResource(index);
     }
 };
 

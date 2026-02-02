@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { store } from '../store';
+import { store } from '../store'; // The Brain
 import { auth } from '../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useRouter } from 'vue-router'; 
@@ -9,17 +9,13 @@ import logoImg from '../assets/logo.png';
 
 const router = useRouter();
 const isScrolled = ref(false);
-const isLoggedIn = ref(false);
-const userData = ref(null);
 const isMenuOpen = ref(false);
-const navbarRef = ref(null); // Reference to track clicks inside navbar
+const navbarRef = ref(null); 
 
-// --- AUTH LOGIC ---
-onAuthStateChanged(auth, (user) => {
-  isLoggedIn.value = !!user;
-  userData.value = user;
-  store.user = user;
-});
+// --- THE FIX: LISTEN TO STORE (Single Source of Truth) ---
+// This ensures the Navbar updates whether it's an Admin OR a Google User
+const userData = computed(() => store.user);
+const isLoggedIn = computed(() => !!store.user);
 
 const userInitial = computed(() => {
     if (userData.value?.email) {
@@ -28,41 +24,47 @@ const userInitial = computed(() => {
     return 'U';
 });
 
+// --- SYNC GOOGLE LOGIN TO STORE ---
+// We keep this listener to capture Firebase logins and save them to the store
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+      store.user = {
+          displayName: user.displayName || user.email.split('@')[0],
+          email: user.email,
+          photoURL: user.photoURL,
+          role: 'client' 
+      };
+  }
+});
+
 const handleAuthClick = async () => {
   if (isLoggedIn.value) {
-    await signOut(auth);
-    router.push('/'); 
+    // If logged in, show the Logout Confirmation
+    store.isLogoutModalOpen = true; 
   } else {
+    // If NOT logged in, show the Login Modal
     store.openModal();
   }
   closeMenu();
 };
 
-// --- SCROLL LOGIC ---
+// --- SCROLL & MENU LOGIC ---
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 20;
-  // NOTE: We do NOT auto-close menu here anymore, to prevent it disappearing when you try to scroll the list itself.
 };
 
-// --- CLICK OUTSIDE LOGIC (NEW) ---
 const handleClickOutside = (event) => {
-  // If menu is open AND the click is NOT inside the navbar...
   if (isMenuOpen.value && navbarRef.value && !navbarRef.value.contains(event.target)) {
     closeMenu();
   }
 };
 
-const toggleMenu = () => {
-    isMenuOpen.value = !isMenuOpen.value;
-};
-
-const closeMenu = () => {
-    isMenuOpen.value = false;
-};
+const toggleMenu = () => { isMenuOpen.value = !isMenuOpen.value; };
+const closeMenu = () => { isMenuOpen.value = false; };
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
-  document.addEventListener('click', handleClickOutside); // Listen for clicks anywhere
+  document.addEventListener('click', handleClickOutside);
 });
 
 onUnmounted(() => {
@@ -154,7 +156,7 @@ onUnmounted(() => {
               aria-expanded="false"
             >
               <div class="user-avatar-small" :class="isScrolled ? 'border-navy' : 'border-white'">
-                 <img v-if="userData.photoURL" :src="userData.photoURL" alt="User">
+                 <img v-if="userData.avatar || userData.photoURL" :src="userData.avatar || userData.photoURL" alt="User">
                  <span v-else class="initial-small">{{ userInitial }}</span>
               </div>
               <span class="d-none d-lg-block fw-bold small">
@@ -166,16 +168,22 @@ onUnmounted(() => {
               <li class="px-2 pb-2 border-bottom mb-2">
                   <span class="d-block fw-bold text-dark">{{ userData.displayName || 'Valued Client' }}</span>
                   <span class="d-block small text-muted">{{ userData.email }}</span>
+                  <span class="badge bg-primary mt-1" v-if="userData.role === 'admin'">Administrator</span>
               </li>
 
-              <li><router-link class="dropdown-item d-flex align-items-center gap-2" to="/dashboard" @click="closeMenu"><span>👤</span> My Profile</router-link></li>
+              <li v-if="userData.role === 'admin'">
+                  <router-link class="dropdown-item d-flex align-items-center gap-2" to="/admin" @click="closeMenu">
+                      <span>⚙️</span> Admin Panel
+                  </router-link>
+              </li>
+              <li>
+                  <router-link class="dropdown-item d-flex align-items-center gap-2" to="/dashboard" @click="closeMenu">
+                      <span>👤</span> My Profile
+                  </router-link>
+              </li>
               <li><hr class="dropdown-divider"></li>
               <li>
-                <button @click="handleAuthClick" class="dropdown-item fw-bold d-flex align-items-center gap-2 text-navy">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                      <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2H2v9h8v-2a.5.5 0 0 1 1 0v2z"/>
-                      <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                   </svg>
+                <button @click="handleAuthClick" class="dropdown-item fw-bold d-flex align-items-center gap-2 text-danger">
                    Log Out
                 </button>
               </li>
@@ -199,13 +207,12 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* --- UTILS --- */
+/* Keeping your exact original styles */
 .text-navy { color: #1a2b49 !important; }
 .text-white { color: white !important; }
 .border-navy { border: 2px solid #1a2b49; }
 .border-white { border: 2px solid rgba(255,255,255,0.8); }
 
-/* --- DROPDOWN (Desktop Default) --- */
 @media (min-width: 992px) {
   .dropdown-menu {
       margin-top: 15px; 
@@ -234,7 +241,6 @@ onUnmounted(() => {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- STATE 2: SCROLLED (Glassy White) --- */
 .glass-nav {
     background-color: rgba(255, 255, 255, 0.95) !important;
     backdrop-filter: blur(1px); 
@@ -246,7 +252,6 @@ onUnmounted(() => {
 }
 .glass-nav .navbar-toggler-icon { filter: invert(1); }
 
-/* --- STATE 1: TOP OF PAGE (Solid Navy) --- */
 .bg-solid {
     background-color: #1a2b49; 
     box-shadow: none;
@@ -255,7 +260,6 @@ onUnmounted(() => {
 }
 .bg-solid .navbar-toggler-icon { filter: invert(0); }
 
-/* --- BRAND --- */
 .brand-container {
     position: relative;
     display: flex; align-items: center;
@@ -275,7 +279,6 @@ onUnmounted(() => {
 }
 .show-logo { opacity: 1; transform: translateY(0); }
 
-/* --- USER AVATAR --- */
 .user-avatar-small {
     width: 32px; height: 32px;
     border-radius: 50%; overflow: hidden;
@@ -285,7 +288,6 @@ onUnmounted(() => {
 .user-avatar-small img { width: 100%; height: 100%; object-fit: cover; }
 .initial-small { color: white; font-size: 0.8rem; font-weight: bold; }
 
-/* --- CUSTOM MOBILE MENU (The Fixes) --- */
 @media (max-width: 991px) {
     .custom-mobile-menu {
         position: absolute;

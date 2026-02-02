@@ -6,26 +6,31 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const user = computed(() => store.user);
 
-// --- 1. CONNECT TO STORE RESOURCES (The Fix) ---
-// Instead of a hardcoded list, we now watch the global store.
-// If the admin adds a file, this list updates automatically.
+// --- 1. CONNECT TO STORE RESOURCES ---
 const resources = computed(() => store.content.resources || []);
 
 // --- NEWS FEED LOGIC ---
-const news = ref([]);
-const newsLoading = ref(true);
-
-const fetchIndustryNews = async () => {
-    try {
-        const res = await fetch(`https://gnews.io/api/v4/top-headlines?category=business&lang=en&apikey=YOUR_GNEWS_API_KEY`);
-        const data = await res.json();
-        news.value = data.articles?.slice(0, 3) || [];
-    } catch (err) {
-        console.error("News Load Error:", err);
-    } finally {
-        newsLoading.value = false;
+const news = ref([
+    {
+        title: "Digital Transformation: Kenya's 2026 Tech Roadmap",
+        source: { name: "TechCrunch Africa" },
+        url: "#",
+        date: "2 hours ago"
+    },
+    {
+        title: "The Role of AI in Eastern African Policy Making",
+        source: { name: "Business Daily" },
+        url: "#",
+        date: "5 hours ago"
+    },
+    {
+        title: "KCA University Partners with Global Tech Giants",
+        source: { name: "University News" },
+        url: "#",
+        date: "1 day ago"
     }
-};
+]);
+const newsLoading = ref(false);
 
 // --- DOWNLOAD LOGIC ---
 const downloadFile = (fileName) => {
@@ -42,10 +47,6 @@ onMounted(async () => {
     window.scrollTo(0, 0);
     if (!store.user) {
         router.push('/');
-    } else {
-        await fetchIndustryNews();
-        await nextTick();
-        window.scrollTo(0, 0);
     }
 });
 
@@ -73,7 +74,7 @@ const openBooking = () => {
         
         <div class="d-flex align-items-center gap-3">
              <div class="user-pill bg-white px-3 py-2 rounded-pill shadow-sm d-flex align-items-center gap-2">
-                 <img :src="user.avatar" class="rounded-circle border" width="32" height="32">
+                 <img :src="user.avatar || user.photoURL" class="rounded-circle border" width="32" height="32">
                  <div class="d-none d-sm-block">
                     <span class="small fw-bold text-navy d-block">{{ user.email }}</span>
                  </div>
@@ -95,7 +96,9 @@ const openBooking = () => {
                       </div>
                       <div>
                           <h6 class="text-muted mb-0 small">{{ ['Account Type', 'Files Access', 'Session Status'][i-1] }}</h6>
-                          <h5 class="fw-bold mb-0 text-navy">{{ ['Premium Client', resources.length + ' Documents', 'Encrypted'][i-1] }}</h5>
+                          <h5 class="fw-bold mb-0 text-navy">
+                              {{ i === 1 ? 'Premium Client' : (i === 2 ? resources.length + ' Documents' : 'Encrypted') }}
+                          </h5>
                       </div>
                   </div>
               </div>
@@ -125,18 +128,10 @@ const openBooking = () => {
                                 <small class="text-muted">{{ file.size }} • Ready for Download</small>
                               </div>
                           </div>
-                          
-                          <button 
-                            v-if="file.status === 'Available'" 
-                            @click="downloadFile(file.fileName)"
-                            class="btn btn-sm btn-navy rounded-pill px-3 fw-bold d-flex align-items-center gap-2"
-                          >
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5zM7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                          <button v-if="file.status === 'Available'" @click="downloadFile(file.fileName)" class="btn btn-sm btn-navy rounded-pill px-3 fw-bold d-flex align-items-center gap-2">
                             Download
                           </button>
-                          <span v-else class="text-muted small fst-italic">
-                              🔒 Request Access
-                          </span>
+                          <span v-else class="text-muted small fst-italic">🔒 Request Access</span>
                       </div>
                   </div>
               </div>
@@ -171,14 +166,13 @@ const openBooking = () => {
               <router-link to="/insights" class="text-navy small fw-bold text-decoration-none">View All Insights ➝</router-link>
           </div>
           
-          <div v-if="newsLoading" class="text-center py-5">
-              <div class="spinner-border text-navy spinner-border-sm"></div>
-          </div>
-
-          <div v-else class="row g-3">
+          <div class="row g-3">
               <div v-for="(article, index) in news" :key="index" class="col-md-4">
-                  <a :href="article.url" target="_blank" class="news-card-mini bg-white p-3 rounded-3 shadow-sm d-block text-decoration-none">
-                      <div class="small text-gold mb-2 fw-bold text-uppercase">{{ article.source.name }}</div>
+                  <a :href="article.url" class="news-card-mini bg-white p-3 rounded-3 shadow-sm d-block text-decoration-none">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                          <div class="small text-gold fw-bold text-uppercase">{{ article.source.name }}</div>
+                          <div class="small text-muted" style="font-size: 0.75rem">{{ article.date }}</div>
+                      </div>
                       <h6 class="text-navy fw-bold mb-0 line-clamp-2">{{ article.title }}</h6>
                   </a>
               </div>
@@ -190,6 +184,7 @@ const openBooking = () => {
 </template>
 
 <style scoped>
+/* Keeping your existing styles */
 .text-navy { color: #1a2b49; }
 .bg-navy { background-color: #1a2b49; }
 .bg-light-navy { background-color: #f0f4f8; }
@@ -222,7 +217,6 @@ const openBooking = () => {
 .resource-item { transition: background 0.2s; }
 .resource-item:hover { background-color: #fafafa; }
 
-/* LIVE PULSE ANIMATION */
 .status-pulse {
     width: 10px;
     height: 10px;

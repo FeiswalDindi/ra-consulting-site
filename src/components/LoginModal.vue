@@ -11,23 +11,16 @@ const email = ref('');
 const password = ref('');
 const errorMessage = ref(''); 
 const isLogin = ref(true);
+const showPassword = ref(false); // [NEW] Toggle state
 
 const handleSubmit = async () => {
     errorMessage.value = '';
-    
-    // 1. Attempt Login
     const success = store.login(email.value, password.value);
 
     if (success) {
         store.closeModal();
-
-        // 2. THE FIX: Conditional Redirect
         if (store.isAdmin) {
-            // If it's YOU (Admin), go straight to the control panel
             router.push('/admin');
-        } else {
-            // If it's a Client, stay on the current page (as requested)
-            console.log("Client logged in, staying on page.");
         }
     } else {
         errorMessage.value = "Invalid email or password.";
@@ -38,7 +31,6 @@ const handleGoogle = async () => {
   try {
     await signInWithPopup(auth, googleProvider);
     store.closeModal();
-    // Google users are Clients, so they stay on the page
   } catch (error) {
     errorMessage.value = "Google sign-in failed.";
   }
@@ -64,7 +56,20 @@ const handleGoogle = async () => {
 
       <form @submit.prevent="handleSubmit">
         <input type="email" v-model="email" placeholder="Email Address" required class="glass-input mb-3">
-        <input type="password" v-model="password" placeholder="Password" required class="glass-input mb-3">
+        
+        <div class="password-wrapper mb-3">
+            <input 
+                :type="showPassword ? 'text' : 'password'" 
+                v-model="password" 
+                placeholder="Password" 
+                required 
+                class="glass-input"
+            >
+            <span class="eye-icon" @click="showPassword = !showPassword">
+                <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/><path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/></svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="m10.79 12.912-1.614-1.615a3.5 3.5 0 0 1-4.474-4.474l-2.06-2.06C.938 6.278 0 8 0 8s3 5.5 8 5.5a7.029 7.029 0 0 0 2.79-.588zM5.21 3.088A7.028 7.028 0 0 1 8 2.5c5 0 8 5.5 8 5.5s-.939 1.721-2.641 3.238l-2.062-2.062a3.5 3.5 0 0 0-4.474-4.474L5.21 3.089z"/><path d="M5.525 7.646a2.5 2.5 0 0 0 2.829 2.829l-2.83-2.829zm4.95.708-2.829-2.83a2.5 2.5 0 0 1 2.829 2.829zm3.171 6-12-12 .708-.708 12 12-.708.708z"/></svg>
+            </span>
+        </div>
         
         <p v-if="errorMessage" class="error-msg">{{ errorMessage }}</p>
 
@@ -97,6 +102,15 @@ const handleGoogle = async () => {
   border-radius: 8px; color: white; outline: none;
 }
 .glass-input::placeholder { color: rgba(255, 255, 255, 0.6); }
+
+/* NEW: Password Wrapper for Eye Icon */
+.password-wrapper { position: relative; }
+.eye-icon {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    cursor: pointer; color: rgba(255,255,255,0.7);
+}
+.eye-icon:hover { color: white; }
+
 .submit-btn {
   width: 100%; padding: 12px; background: #ffffff; color: #1a2b49;
   font-weight: bold; border: none; border-radius: 8px; transition: transform 0.2s;

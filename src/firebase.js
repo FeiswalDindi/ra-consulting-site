@@ -1,8 +1,8 @@
-// src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore } from "firebase/firestore"; // [NEW] Import Database
 
-// REPLACE THESE VALUES WITH THE ONES FROM YOUR FIREBASE CONSOLE
+// YOUR CONFIG (Keep your own keys here!)
 const firebaseConfig = {
   apiKey: "AIzaSyAjb-zCuKRduJHdfhZmXVb8IUaRP_P_6LY",
   authDomain: "ra-consulting-app.firebaseapp.com",
@@ -15,6 +15,7 @@ const firebaseConfig = {
 // 1. Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// 2. Export the Auth tool so we can use it in LoginView.vue
+// 2. Export Tools
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+export const db = getFirestore(app); // [NEW] Export Database
