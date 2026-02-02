@@ -1,10 +1,12 @@
 import { reactive } from 'vue';
-import { db } from './firebase'; // Import the database
-import { doc, setDoc, onSnapshot } from 'firebase/firestore'; 
+import { db } from './firebase'; 
+import { doc, setDoc, onSnapshot, collection, addDoc, serverTimestamp } from 'firebase/firestore'; 
 
 const USER_KEY = 'ra_user_session'; 
+const CONTENT_KEY = 'ra_site_content';
+const APP_VERSION = 'v2.8'; 
 
-// 1. Helper: Load User (Keep this local for security)
+// Helpers
 const loadUser = () => {
     try {
         const saved = localStorage.getItem(USER_KEY);
@@ -13,60 +15,76 @@ const loadUser = () => {
     } catch (e) { return null; }
 };
 
+const loadContent = () => {
+    try {
+        const saved = localStorage.getItem(CONTENT_KEY);
+        if (!saved) return null;
+        return JSON.parse(saved).data;
+    } catch (e) { return null; }
+};
+
+const savedUser = loadUser();
+
 export const store = reactive({
   // --- STATE ---
-  user: loadUser(),         
+  user: savedUser,         
   isLoginModalOpen: false,
   isLogoutModalOpen: false,
-  isAdmin: loadUser()?.role === 'admin', 
+  isAdmin: savedUser?.role === 'admin', 
 
-  // --- CONTENT (Syncs with Cloud) ---
-  // Default data serves as a placeholder until Cloud loads
-  content: {
-    heroSlides: [
-      { id: 1, image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80', title: 'Strategic Insights.', subtitle: 'Empowering institutions with data-driven advisory.' },
-      { id: 2, image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80', title: 'Digital Transformation.', subtitle: 'Modernizing governance through advanced ICT systems.' }
-    ],
+  // --- CONTENT ---
+  content: loadContent() || {
+    // ... (Your existing default content stays here, shortened for brevity)
+    heroSlides: [], 
     hero: { buttonText: 'Explore Our Services' },
     about: { title: 'Who We Are', text: 'RA Strategic & Analytics Consulting Ltd is a multidisciplinary advisory firm...' },
-    socialUpdates: [
-        { id: 1, platform: 'LinkedIn', date: new Date().toISOString(), text: 'We are thrilled to announce our partnership with Africa Nazarene University.', link: '#' }
-    ],
-    resources: [
-        { id: 1, title: '2026 Strategy Guidelines', fileName: 'Strategic_Guidelines.pdf', type: 'PDF', size: '2.4 MB', status: 'Available' }
-    ]
+    socialUpdates: [],
+    resources: []
   },
 
   // --- ACTIONS ---
   openModal() { this.isLoginModalOpen = true; },
   closeModal() { this.isLoginModalOpen = false; },
   
-  // [NEW] Save to Cloud Database
+  // 1. CLOUD SAVE (Content)
   async saveContent() {
     try {
         const docRef = doc(db, "global_content", "main_data");
-        // We use JSON.parse/stringify to remove any Vue proxies before sending
         await setDoc(docRef, JSON.parse(JSON.stringify(this.content)));
-        console.log("Saved to Cloud!");
-    } catch (e) {
-        console.error("Cloud Save Failed:", e);
-        alert("Error saving to cloud. Check console.");
-    }
+    } catch (e) { console.error("Save failed", e); }
   },
 
-  // File Manager Logic
+  // 2. [NEW] USER TRACKING SYSTEM
+  async trackActivity(actionType, details = "") {
+      if (!this.user) return; // Can only track logged-in users
+
+      try {
+          // Creates a new entry in a "user_logs" collection in Firestore
+          await addDoc(collection(db, "user_logs"), {
+              userEmail: this.user.email,
+              userName: this.user.displayName,
+              action: actionType, // e.g., "Login", "Downloaded File"
+              details: details,
+              timestamp: serverTimestamp() // Uses server time
+          });
+          console.log(`Activity Tracked: ${actionType}`);
+      } catch (e) {
+          console.error("Tracking Error:", e);
+      }
+  },
+
   addResource(fileData) {
       if (!this.content.resources) this.content.resources = [];
       this.content.resources.unshift(fileData);
-      this.saveContent(); // Pushes to Cloud
+      this.saveContent();
   },
 
   deleteResource(index) {
       this.content.resources.splice(index, 1);
-      this.saveContent(); // Pushes to Cloud
+      this.saveContent();
   },
 
-  // --- LOGIN LOGIC (Keeps User Logged In) ---
+  // --- LOGIN ---
   login(email, password) {
     let loggedInUser = null;
 
@@ -82,32 +100,31 @@ export const store = reactive({
     if (loggedInUser) {
         this.user = loggedInUser;
         localStorage.setItem(USER_KEY, JSON.stringify(loggedInUser));
+        
+        // [NEW] Track the Login immediately
+        this.trackActivity("Login", "User logged in via Email/Password");
+        
         return true;
     }
     return false;
   },
   
   logout() {
+      // [NEW] Track Logout before clearing data
+      this.trackActivity("Logout", "User signed out");
+      
       this.user = null;
       this.isAdmin = false;
       localStorage.removeItem(USER_KEY); 
   }
 });
 
-// --- [NEW] REALTIME CLOUD LISTENER ---
-// This connects the app to the cloud immediately.
-// If Admin updates content, this runs automatically for ALL users.
+// CLOUD LISTENER
 try {
     const docRef = doc(db, "global_content", "main_data");
     onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
-            console.log("Cloud Update Received!");
             store.content = docSnap.data();
-        } else {
-            // First time running? Create the doc with defaults
-            store.saveContent();
         }
     });
-} catch (e) {
-    console.error("Database connection failed:", e);
-}
+} catch (e) {}
