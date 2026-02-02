@@ -5,56 +5,55 @@ const articles = ref([]);
 const loading = ref(true);
 const error = ref(null);
 
-// 1. CONFIGURATION
-// Replace this with your actual key from GNews.io
-const API_KEY = '07b93ccd1763436d3dbf7df3a1e095f4'; 
-// Fallback content in case API fails or limit is reached
+// --- 1. CONFIGURATION ---
+// 🔴 IMPORTANT: Replace with your actual key from https://newsdata.io/
+const API_KEY = 'pub_2c579651e55e434ca7118343e55a9720'; 
+
 const BACKUP_NEWS = [
     {
-        title: "The Future of Digital Transformation in East Africa",
-        description: "How cloud computing and AI are reshaping government services and private sector efficiency across the region.",
-        image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80",
-        url: "#",
-        source: { name: "RA Insights" },
-        publishedAt: new Date().toISOString()
+        title: "Kenya's Digital Economy Expected to Grow by 5.2% in 2026",
+        description: "New reports indicate a massive surge in fintech adoption and cloud infrastructure across Nairobi.",
+        image_url: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80",
+        link: "#",
+        source_id: "RA Insights",
+        pubDate: new Date().toISOString()
     },
     {
-        title: "Economic Outlook 2026: Key Sectors to Watch",
-        description: "An in-depth analysis of agricultural exports, fintech growth, and infrastructure development in Kenya.",
-        image: "https://images.unsplash.com/photo-1526304640155-246c085ce427?auto=format&fit=crop&q=80",
-        url: "#",
-        source: { name: "RA Research" },
-        publishedAt: new Date().toISOString()
+        title: "Nairobi Securities Exchange Adopts AI for Market Analysis",
+        description: "The NSE has partnered with global tech firms to integrate predictive analytics for better trading outcomes.",
+        image_url: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&q=80",
+        link: "#",
+        source_id: "Business Daily",
+        pubDate: new Date().toISOString()
     },
     {
-        title: "Strategic Governance in Non-Profits",
-        description: "Why modern NGOs are adopting corporate governance frameworks to ensure sustainability and impact.",
-        image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80",
-        url: "#",
-        source: { name: "Policy Brief" },
-        publishedAt: new Date().toISOString()
+        title: "Government Launches New Policy for Sustainable Manufacturing",
+        description: "The Ministry of Trade announces tax incentives for companies adopting green energy solutions.",
+        image_url: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80",
+        link: "#",
+        source_id: "Policy Brief",
+        pubDate: new Date().toISOString()
     }
 ];
 
-// 2. FETCH FUNCTION
+// --- 2. FETCH LOGIC (NewsData.io) ---
 const fetchNews = async () => {
     try {
-        // Query: Business OR Technology in Kenya
-        const query = "business AND kenya"; 
-        const url = `https://gnews.io/api/v4/search?q=${query}&lang=en&country=ke&max=6&apikey=${API_KEY}`;
+        // Query: Kenya (country=ke), Category: Business/Tech/Politics
+        // Note: Free tier might be limited to 'en' language
+        const url = `https://newsdata.io/api/1/news?apikey=${API_KEY}&country=ke&category=business,technology&language=en`;
         
         const response = await fetch(url);
         const data = await response.json();
 
-        if (data.articles) {
-            articles.value = data.articles;
+        if (data.status === 'success' && data.results.length > 0) {
+            articles.value = data.results;
         } else {
             throw new Error("API Limit Reached or No Data");
         }
 
     } catch (err) {
         console.warn("Using Backup News:", err);
-        // Load backup data seamlessly so user never sees an error
         articles.value = BACKUP_NEWS;
         error.value = true; 
     } finally {
@@ -66,19 +65,25 @@ onMounted(() => {
     fetchNews();
 });
 
-// Helper to format date
+// Helper: Format Date
 const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    if(!dateString) return 'Recent';
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
+};
+
+// Helper: Fallback Image if API returns null
+const getimage = (img) => {
+    return img ? img : 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&q=80';
 };
 </script>
 
 <template>
   <main class="insights-page bg-light min-vh-100">
     
-    <section class="py-5 bg-dark text-white text-center position-relative overflow-hidden">
+    <section class="py-5 bg-navy text-white text-center position-relative overflow-hidden">
       <div class="container py-5 position-relative z-2">
-        <h6 class="text-warning ls-2 text-uppercase mb-2">Market Intelligence</h6>
+        <h6 class="text-sky ls-2 text-uppercase mb-2 fw-bold">Market Intelligence</h6>
         <h1 class="display-3 fw-bold">Latest Insights</h1>
         <p class="lead text-white-50 mx-auto" style="max-width: 700px;">
             Curated updates on Policy, Technology, and Economic trends shaping our region.
@@ -90,35 +95,37 @@ const formatDate = (dateString) => {
       <div class="container py-4">
         
         <div v-if="loading" class="text-center py-5">
-            <div class="spinner-border text-navy" role="status"></div>
-            <p class="text-muted mt-3 small">Fetching latest updates...</p>
+            <div class="spinner-border text-sky" role="status"></div>
+            <p class="text-muted mt-3 small">Fetching latest market data...</p>
         </div>
 
         <div v-else class="row g-4">
             
             <div class="col-md-6 col-lg-4" v-for="(article, index) in articles" :key="index">
-                <a :href="article.url" target="_blank" class="card h-100 border-0 shadow-sm news-card text-decoration-none">
+                <a :href="article.link" target="_blank" class="card h-100 border-0 shadow-sm news-card text-decoration-none">
                     
                     <div class="card-img-top overflow-hidden position-relative" style="height: 200px;">
-                        <img :src="article.image" :alt="article.title" class="w-100 h-100 object-fit-cover transition-img">
+                        <img :src="getimage(article.image_url)" class="w-100 h-100 object-fit-cover transition-img">
                         <div class="category-badge">
-                            {{ article.source.name }}
+                            {{ article.source_id }}
                         </div>
                     </div>
 
                     <div class="card-body p-4 d-flex flex-column">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="text-gold fw-bold">{{ formatDate(article.publishedAt) }}</small>
+                            <small class="text-sky fw-bold">{{ formatDate(article.pubDate) }}</small>
                         </div>
                         
                         <h5 class="fw-bold text-navy mb-3 line-clamp-2">{{ article.title }}</h5>
                         <p class="text-muted small line-clamp-3 mb-4 flex-grow-1">
-                            {{ article.description }}
+                            {{ article.description || "Click to read the full story and detailed analysis on the source website." }}
                         </p>
 
                         <div class="d-flex align-items-center text-navy fw-bold small">
                             Read Article 
-                            <span class="ms-2 transition-arrow">→</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="ms-2 transition-arrow" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
+                            </svg>
                         </div>
                     </div>
                 </a>
@@ -128,7 +135,7 @@ const formatDate = (dateString) => {
 
         <div v-if="error" class="text-center mt-5">
             <small class="text-muted fst-italic">
-                * Displaying curated insights. Live feed updates hourly.
+                * Live API limit reached. Showing curated archive data.
             </small>
         </div>
 
@@ -140,19 +147,21 @@ const formatDate = (dateString) => {
 
 <style scoped>
 /* COLORS */
-.bg-dark { background-color: #1a2b49 !important; }
+.bg-navy { background-color: #1a2b49 !important; }
 .text-navy { color: #1a2b49; }
-.text-gold { color: #c5a059; }
-.text-warning { color: #c5a059 !important; }
+.text-sky { color: #0dcaf0; } /* Bootstrap Info / Sky Blue */
+.bg-sky { background-color: #0dcaf0; }
 
 /* CARD STYLES */
 .news-card {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
     background: white;
+    border-top: 4px solid transparent !important; /* Invisible top border default */
 }
 .news-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 15px 30px rgba(26, 43, 73, 0.1) !important;
+    border-top: 4px solid #0dcaf0 !important; /* Sky blue top border on hover */
 }
 
 /* IMAGE ZOOM EFFECT */
@@ -163,13 +172,14 @@ const formatDate = (dateString) => {
 .category-badge {
     position: absolute;
     top: 15px; left: 15px;
-    background: rgba(26, 43, 73, 0.9);
-    color: white;
-    font-size: 0.75rem;
+    background: rgba(26, 43, 73, 0.95); /* Navy background */
+    color: #0dcaf0; /* Sky blue text */
+    font-size: 0.7rem;
     font-weight: bold;
-    padding: 5px 12px;
-    border-radius: 20px;
-    backdrop-filter: blur(4px);
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 4px;
+    letter-spacing: 1px;
 }
 
 /* TEXT TRUNCATION */
@@ -189,7 +199,7 @@ const formatDate = (dateString) => {
 }
 
 /* ARROW ANIMATION */
-.transition-arrow { transition: transform 0.2s; display: inline-block; }
+.transition-arrow { transition: transform 0.2s; }
 .news-card:hover .transition-arrow { transform: translateX(5px); }
 
 .ls-2 { letter-spacing: 2px; }

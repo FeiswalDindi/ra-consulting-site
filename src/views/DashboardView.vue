@@ -1,61 +1,87 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { store } from '../store'; 
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const user = computed(() => store.user);
-
-// --- 1. CONNECT TO STORE RESOURCES ---
 const resources = computed(() => store.content.resources || []);
 
-// --- NEWS FEED LOGIC ---
-const news = ref([
-    {
-        title: "Digital Transformation: Kenya's 2026 Tech Roadmap",
-        source: { name: "TechCrunch Africa" },
-        url: "#",
-        date: "2 hours ago"
-    },
-    {
-        title: "The Role of AI in Eastern African Policy Making",
-        source: { name: "Business Daily" },
-        url: "#",
-        date: "5 hours ago"
-    },
-    {
-        title: "KCA University Partners with Global Tech Giants",
-        source: { name: "University News" },
-        url: "#",
-        date: "1 day ago"
+// --- LIVE NEWS LOGIC ---
+const news = ref([]);
+const newsLoading = ref(true);
+
+// 🔴 REPLACE KEY HERE TOO
+const API_KEY = 'pub_2c579651e55e434ca7118343e55a9720'; 
+
+const fetchDashboardNews = async () => {
+    try {
+        const url = `https://newsdata.io/api/1/news?apikey=${API_KEY}&country=ke&category=business,technology&language=en`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status === 'success' && data.results.length > 0) {
+            // Only take top 3 for dashboard
+            news.value = data.results.slice(0, 3);
+        } else {
+            // Fallback
+            throw new Error("No Data");
+        }
+    } catch (e) {
+        // Silent fallback for dashboard
+        news.value = [
+            { title: "Kenya's 2026 Tech Roadmap", source_id: "RA Insights", link: "#", pubDate: new Date() },
+            { title: "AI in East African Policy", source_id: "Policy Brief", link: "#", pubDate: new Date() },
+            { title: "Nairobi Finance Summit", source_id: "Biz Daily", link: "#", pubDate: new Date() }
+        ];
+    } finally {
+        newsLoading.value = false;
     }
-]);
-const newsLoading = ref(false);
+};
 
 // --- DOWNLOAD LOGIC ---
+// Inside src/views/DashboardView.vue
 const downloadFile = (fileName) => {
-    const fileUrl = `/files/${fileName}`;
+    // 1. Point to the public/files folder
+    // Ensure there is a leading slash / to start from the root
+    const fileUrl = `/files/${fileName}`; 
+
+    // 2. Create the download trigger
     const link = document.createElement('a');
     link.href = fileUrl;
+    
+    // 3. Force download and set the filename
     link.setAttribute('download', fileName);
+    
+    // 4. Append, click, and cleanup
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // 5. Track the activity in the database (Industrial Pro Logic)
+    store.trackActivity("File Download", `User downloaded: ${fileName}`);
 };
 
-onMounted(async () => {
+onMounted(() => {
     window.scrollTo(0, 0);
     if (!store.user) {
         router.push('/');
     }
+    fetchDashboardNews();
 });
 
-const handleLogout = () => {
-    store.isLogoutModalOpen = true;
-};
+const handleLogout = () => { store.isLogoutModalOpen = true; };
+const openBooking = () => { window.open('https://calendly.com/your-profile/30min', '_blank'); };
 
-const openBooking = () => {
-    window.open('https://calendly.com/your-profile/30min', '_blank');
+// Helpers
+const formatDate = (d) => {
+   if(!d) return '';
+   const date = new Date(d);
+   // Calculate "Hours Ago" or "Days Ago" for dashboard
+   const now = new Date();
+   const diff = Math.floor((now - date) / 1000 / 60 / 60); // hours
+   if (diff < 24) return `${diff} hrs ago`;
+   return `${Math.floor(diff/24)} days ago`;
 };
 </script>
 
@@ -90,9 +116,9 @@ const openBooking = () => {
               <div class="card border-0 shadow-sm p-4 h-100 dashboard-card">
                   <div class="d-flex align-items-center gap-3">
                       <div class="svg-icon-box bg-light-navy rounded-circle">
-                          <svg v-if="i==1" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1a2 2 0 0 0-2 2v4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5V3a3 3 0 0 1 6 0v4a.5.5 0 0 1-1 0V3a2 2 0 0 0-2-2z"/></svg>
-                          <svg v-if="i==2" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/></svg>
-                          <svg v-if="i==3" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/></svg>
+                          <svg v-if="i==1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1a2 2 0 0 0-2 2v4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h5V3a3 3 0 0 1 6 0v4a.5.5 0 0 1-1 0V3a2 2 0 0 0-2-2z"/></svg>
+                          <svg v-if="i==2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/></svg>
+                          <svg v-if="i==3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09z"/></svg>
                       </div>
                       <div>
                           <h6 class="text-muted mb-0 small">{{ ['Account Type', 'Files Access', 'Session Status'][i-1] }}</h6>
@@ -166,12 +192,17 @@ const openBooking = () => {
               <router-link to="/insights" class="text-navy small fw-bold text-decoration-none">View All Insights ➝</router-link>
           </div>
           
-          <div class="row g-3">
+          <div v-if="newsLoading" class="text-center py-4">
+               <span class="spinner-border spinner-border-sm text-sky" role="status"></span>
+               <span class="ms-2 small text-muted">Updating feed...</span>
+          </div>
+
+          <div v-else class="row g-3">
               <div v-for="(article, index) in news" :key="index" class="col-md-4">
-                  <a :href="article.url" class="news-card-mini bg-white p-3 rounded-3 shadow-sm d-block text-decoration-none">
+                  <a :href="article.link" target="_blank" class="news-card-mini bg-white p-3 rounded-3 shadow-sm d-block text-decoration-none">
                       <div class="d-flex justify-content-between align-items-center mb-2">
-                          <div class="small text-gold fw-bold text-uppercase">{{ article.source.name }}</div>
-                          <div class="small text-muted" style="font-size: 0.75rem">{{ article.date }}</div>
+                          <div class="small text-sky fw-bold text-uppercase" style="font-size: 0.7rem;">{{ article.source_id }}</div>
+                          <div class="small text-muted" style="font-size: 0.7rem">{{ formatDate(article.pubDate) }}</div>
                       </div>
                       <h6 class="text-navy fw-bold mb-0 line-clamp-2">{{ article.title }}</h6>
                   </a>
@@ -190,6 +221,7 @@ const openBooking = () => {
 .bg-light-navy { background-color: #f0f4f8; }
 .bg-white-10 { background-color: rgba(255,255,255,0.1); }
 .text-gold { color: #c5a059; }
+.text-sky { color: #0dcaf0; } /* Sky Blue Accent */
 .btn-gold { background-color: #c5a059; color: white; border: none; }
 .btn-gold:hover { background-color: #b38f4d; color: white; }
 
@@ -203,8 +235,9 @@ const openBooking = () => {
 .ls-2 { letter-spacing: 2px; }
 .svg-icon-box { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: #1a2b49; }
 
+/* NEWS CARD UPDATE */
 .news-card-mini { transition: all 0.3s ease; border-left: 4px solid transparent; }
-.news-card-mini:hover { border-left-color: #c5a059; transform: translateX(5px); }
+.news-card-mini:hover { border-left-color: #0dcaf0; transform: translateX(5px); }
 
 .line-clamp-2 {
     display: -webkit-box;

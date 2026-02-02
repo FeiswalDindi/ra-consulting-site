@@ -1,18 +1,17 @@
 <script setup>
 import { computed } from 'vue';
-import { store } from '../store'; // Import the store
-import { useRouter } from 'vue-router';
+import { store } from '../store';
+import { useRouter, useRoute } from 'vue-router'; // Added useRoute
 
 const router = useRouter();
+const route = useRoute(); // Access current route to hide CTA on Contact page
 const currentYear = computed(() => new Date().getFullYear());
 
 // SMART ADMIN LOGIC
 const handleAdminClick = () => {
   if (store.isAdmin) {
-    // If already logged in as admin, go to dashboard
     router.push('/admin');
   } else {
-    // If not, open the login popup so they CAN log in
     store.openModal();
   }
 };
@@ -21,11 +20,22 @@ const handleAdminClick = () => {
 <template>
   <footer class="bg-navy text-white pt-5 pb-3 mt-auto position-relative" style="z-index: 100;">
     <div class="container">
-      <div class="row g-4">
+      
+      <div v-if="route.path !== '/contact'" class="text-center mb-5 pb-4 border-bottom border-white-10">
+          <h3 class="fw-bold text-white mb-3">Ready to transform your institution?</h3>
+          <p class="text-white-50 mb-4" style="max-width: 600px; margin: 0 auto;">
+              Let's collaborate to build data-driven strategies that deliver sustainable impact.
+          </p>
+          <router-link to="/contact" class="btn btn-sky rounded-pill px-5 py-3 fw-bold shadow-lg hover-scale">
+              Send us a message!
+          </router-link>
+      </div>
+
+      <div class="row g-4 mt-2">
         
         <div class="col-lg-4 col-md-6">
           <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#c5a059" viewBox="0 0 16 16">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#0ea5e9" viewBox="0 0 16 16">
                <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/>
             </svg>
             <span class="text-white">RA Consulting</span>
@@ -54,14 +64,13 @@ const handleAdminClick = () => {
         </div>
 
         <div class="col-lg-2 col-md-6">
-          <h6 class="fw-bold text-gold mb-3">Quick Links</h6>
+          <h6 class="fw-bold text-sky mb-3">Quick Links</h6>
           <ul class="list-unstyled d-flex flex-column gap-2 small">
             <li><router-link to="/" class="footer-link">Home</router-link></li>
             <li><router-link to="/about" class="footer-link">About Us</router-link></li>
             <li><router-link to="/services" class="footer-link">Services</router-link></li>
             <li><router-link to="/careers" class="footer-link">Work With Us</router-link></li>
             <li><router-link to="/insights" class="footer-link">Insights</router-link></li>
-            
             <li>
                 <a href="#" @click.prevent="handleAdminClick" class="footer-link text-white-50">
                     Administration
@@ -71,7 +80,7 @@ const handleAdminClick = () => {
         </div>
 
         <div class="col-lg-3 col-md-6">
-           <h6 class="fw-bold text-gold mb-3">Expertise</h6>
+           <h6 class="fw-bold text-sky mb-3">Expertise</h6>
            <ul class="list-unstyled d-flex flex-column gap-2 small text-white-50">
              <li><router-link to="/services/research" class="footer-link">Research & Policy Advisory</router-link></li>
              <li><router-link to="/services/ict" class="footer-link">ICT & Data Analytics</router-link></li>
@@ -81,7 +90,7 @@ const handleAdminClick = () => {
         </div>
 
         <div class="col-lg-3 col-md-6">
-           <h6 class="fw-bold text-gold mb-3">Contact</h6>
+           <h6 class="fw-bold text-sky mb-3">Contact</h6>
            <ul class="list-unstyled d-flex flex-column gap-2 small text-white-50">
              <li>Nairobi, Kenya</li>
              <li>info@rastrategicanalytics.com</li>
@@ -90,7 +99,7 @@ const handleAdminClick = () => {
         </div>
 
       </div>
-      <hr class="border-secondary my-4">
+      <hr class="border-secondary my-4 opacity-25">
       <div class="text-center small text-white-50">
         &copy; {{ currentYear }} RA Strategic & Analytics Consulting Ltd. All Rights Reserved.
       </div>
@@ -99,12 +108,32 @@ const handleAdminClick = () => {
 </template>
 
 <style scoped>
+/* NAVY THEME */
 .bg-navy { background-color: #1a2b49; }
-.text-gold { color: #c5a059; }
 
+/* SKY BLUE THEME (Replacing Gold) */
+/* Using a vibrant sky blue similar to the clipboard button provided */
+.text-sky { color: #0ea5e9 !important; } 
+
+.btn-sky {
+    background-color: #0ea5e9;
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+}
+.btn-sky:hover {
+    background-color: #0284c7; /* Slightly darker on hover */
+    transform: translateY(-3px);
+}
+
+.border-white-10 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* SOCIAL ICONS */
 .social-icon {
   width: 36px; height: 36px;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.05);
   color: white;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -112,17 +141,26 @@ const handleAdminClick = () => {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .social-icon:hover {
-  background-color: #c5a059;
-  color: #1a2b49;
+  background-color: #0ea5e9; /* Sky Blue Hover */
+  color: white;
   transform: translateY(-3px);
-  border-color: #c5a059;
+  border-color: #0ea5e9;
 }
 
+/* LINKS */
 .footer-link {
   color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
   transition: color 0.2s;
   cursor: pointer;
 }
-.footer-link:hover { color: #c5a059; padding-left: 5px; }
+.footer-link:hover { 
+    color: #0ea5e9; /* Sky Blue Hover */
+    padding-left: 5px; 
+}
+
+/* ANIMATIONS */
+.hover-scale:hover {
+    transform: scale(1.05);
+}
 </style>

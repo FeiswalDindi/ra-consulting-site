@@ -8,9 +8,9 @@
       
       <div class="row justify-content-center text-center mb-5" v-scroll-reveal>
         <div class="col-lg-8">
-          <h6 class="text-uppercase text-gold ls-2 fw-bold mb-2">Industries We Serve</h6>
+          <h6 class="text-uppercase text-sky ls-2 fw-bold mb-2">Industries We Serve</h6>
           <h2 class="display-5 fw-bold text-navy">Specialized Expertise</h2>
-          <div class="divider mx-auto mt-4 bg-gold"></div>
+          <div class="divider mx-auto mt-4 bg-sky"></div>
         </div>
       </div>
 
@@ -79,11 +79,13 @@
     border-top: 1px solid #e9ecef;
 }
 
-/* 2. COLORS */
+/* 2. COLORS: THEME UPDATE */
 .text-navy { color: #1a2b49; }
 .bg-navy { background-color: #1a2b49; }
-.text-gold { color: #c5a059; }
-.bg-gold { background-color: #c5a059; }
+
+/* REPLACED GOLD WITH SKY BLUE */
+.text-sky { color: #0ea5e9 !important; }
+.bg-sky { background-color: #0ea5e9; }
 
 .divider { width: 80px; height: 4px; border-radius: 2px; }
 
@@ -92,11 +94,14 @@
     transition: all 0.3s ease;
     border: 1px solid rgba(0,0,0,0.03);
     box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    border-bottom: 4px solid transparent; /* Ready for hover */
 }
 
+/* Hover Logic: Sky Blue Glow + Border */
 .industry-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 15px 30px rgba(26, 43, 73, 0.1) !important;
+    box-shadow: 0 15px 30px rgba(14, 165, 233, 0.15) !important;
+    border-bottom: 4px solid #0ea5e9;
 }
 
 /* 4. ICON CIRCLE - High Contrast (Navy Circle, White Icon) */
@@ -106,6 +111,13 @@
     display: flex; align-items: center; justify-content: center;
     border: 4px solid #fff; /* White ring effect */
     box-shadow: 0 5px 15px rgba(26, 43, 73, 0.15);
+    transition: all 0.3s ease;
+}
+
+/* Icon turns Sky Blue on Card Hover */
+.industry-card:hover .icon-box {
+    background-color: #0ea5e9 !important;
+    transform: scale(1.1);
 }
 
 .ls-2 { letter-spacing: 2px; font-size: 0.8rem; }

@@ -17,11 +17,12 @@ if (!store.isAdmin) {
 const draftContent = ref({ heroSlides: [], hero: {}, about: {}, socialUpdates: [] });
 const activityLogs = ref([]); 
 const isLoadingLogs = ref(true); 
-const isLogsExpanded = ref(true); // [NEW] Toggle for table visibility
+const isLogsExpanded = ref(true); 
 let unsubscribeLogs = null; 
 
-// --- REPORTING STATE ---
-const reportMonths = ref([]); // Holds "January 2026", "February 2026", etc.
+// --- [NEW] REPORTING STATE (Flexible) ---
+const reportType = ref('monthly'); // 'daily', 'monthly', 'yearly'
+const reportPeriod = ref(''); // The selected date input
 const isGeneratingReport = ref(false);
 
 // --- FILE UPLOAD STATE ---
@@ -38,10 +39,44 @@ const analytics = computed(() => {
     return { total, logins, contentViews };
 });
 
+// --- [NEW] LIVE CHART DATA (Last 7 Days) ---
+const chartData = computed(() => {
+    const days = {};
+    const today = new Date();
+    
+    // 1. Initialize last 7 days with 0
+    for(let i=6; i>=0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const key = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        days[key] = 0;
+    }
+
+    // 2. Count logs
+    activityLogs.value.forEach(log => {
+        if (!log.timestamp) return;
+        const date = new Date(log.timestamp.seconds * 1000);
+        const key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (days[key] !== undefined) {
+            days[key]++;
+        }
+    });
+
+    // 3. Find Max for scaling
+    const maxVal = Math.max(...Object.values(days), 1); 
+
+    return Object.keys(days).map(date => ({
+        date,
+        count: days[date],
+        height: (days[date] / maxVal) * 100 + '%'
+    }));
+});
+
 // --- LIVE LOG LISTENER ---
 const subscribeToLogs = () => {
     try {
-        const q = query(collection(db, "user_logs"), orderBy("timestamp", "desc"), limit(50));
+        // Increased limit to 100 to feed the chart better data
+        const q = query(collection(db, "user_logs"), orderBy("timestamp", "desc"), limit(100));
         unsubscribeLogs = onSnapshot(q, (snapshot) => {
             activityLogs.value = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -59,33 +94,40 @@ const subscribeToLogs = () => {
     }
 };
 
-// --- [NEW] MONTHLY REPORT LOGIC ---
-const initReportDropdown = () => {
-    // Generates the last 12 months for the dropdown
-    const options = [];
-    const today = new Date();
-    for (let i = 0; i < 12; i++) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const label = d.toLocaleString('default', { month: 'long', year: 'numeric' }); // e.g., "February 2026"
-        const value = `${d.getFullYear()}-${d.getMonth()}`; // e.g., "2026-1" (Months are 0-indexed)
-        options.push({ label, value });
+// --- [NEW] FLEXIBLE REPORT GENERATOR ---
+const generateReport = async () => {
+    if (!reportPeriod.value) {
+        alert("Please select a date/month first.");
+        return;
     }
-    reportMonths.value = options;
-};
-
-const handleReportSelect = async (event) => {
-    const selectedValue = event.target.value;
-    if (!selectedValue) return;
 
     isGeneratingReport.value = true;
-    const [year, month] = selectedValue.split('-').map(Number);
-
     try {
-        // 1. Calculate Start and End Date for the selected month
-        const startDate = new Date(year, month, 1);
-        const endDate = new Date(year, month + 1, 0, 23, 59, 59); // Last second of the month
+        let startDate, endDate, filename;
+        const selectedDate = new Date(reportPeriod.value);
 
-        // 2. Query Firestore for ONLY that month's data
+        // 1. Determine Date Range
+        if (reportType.value === 'daily') {
+            startDate = new Date(selectedDate.setHours(0,0,0,0));
+            endDate = new Date(selectedDate.setHours(23,59,59,999));
+            filename = `Daily_Report_${reportPeriod.value}`;
+        } 
+        else if (reportType.value === 'monthly') {
+            const [y, m] = reportPeriod.value.split('-');
+            startDate = new Date(y, m - 1, 1);
+            endDate = new Date(y, m, 0, 23, 59, 59);
+            filename = `Monthly_Report_${reportPeriod.value}`;
+        }
+        else if (reportType.value === 'yearly') {
+            // Simplistic yearly handling (assumes user picks any date in that year via date picker or manual entry)
+            // For a robust UI, you'd use a simple number input for year, but sticking to existing logic:
+             const y = selectedDate.getFullYear();
+             startDate = new Date(y, 0, 1);
+             endDate = new Date(y, 11, 31, 23, 59, 59);
+             filename = `Yearly_Report_${y}`;
+        }
+
+        // 2. Query Database
         const q = query(
             collection(db, "user_logs"),
             where("timestamp", ">=", startDate),
@@ -94,32 +136,33 @@ const handleReportSelect = async (event) => {
         );
 
         const snapshot = await getDocs(q);
-        const monthlyLogs = snapshot.docs.map(doc => {
+        const logs = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 time: data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString() : 'Unknown',
                 userName: data.userName || 'Unknown',
                 userEmail: data.userEmail || 'N/A',
+                userRole: data.userRole || 'User',
                 action: data.action,
                 details: data.details
             };
         });
 
-        if (monthlyLogs.length === 0) {
-            alert(`No activity found for ${new Date(year, month).toLocaleString('default', { month: 'long' })}.`);
-            event.target.value = ""; // Reset dropdown
+        if (logs.length === 0) {
+            alert("No activity found for this period.");
             isGeneratingReport.value = false;
             return;
         }
 
         // 3. Generate CSV
         let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Time,User Name,User Email,Action,Details\n";
-        monthlyLogs.forEach(log => {
+        csvContent += "Time,User Name,Email,Role,Action,Details\n";
+        logs.forEach(log => {
              const row = [
                 `"${log.time}"`,
                 `"${log.userName}"`,
                 `"${log.userEmail}"`,
+                `"${log.userRole}"`,
                 `"${log.action}"`,
                 `"${log.details}"`
             ].join(",");
@@ -130,7 +173,7 @@ const handleReportSelect = async (event) => {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `RA_Report_${year}_${month + 1}.csv`);
+        link.setAttribute("download", `${filename}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -140,7 +183,6 @@ const handleReportSelect = async (event) => {
         alert("Error generating report. Check console.");
     } finally {
         isGeneratingReport.value = false;
-        event.target.value = ""; // Reset dropdown
     }
 };
 
@@ -154,7 +196,6 @@ onMounted(() => {
     if (!store.content.resources) store.content.resources = [];
     
     subscribeToLogs();
-    initReportDropdown(); // [NEW] Init dropdown
 });
 
 onUnmounted(() => {
@@ -162,7 +203,6 @@ onUnmounted(() => {
 });
 
 // --- HELPERS & OTHER LOGIC (Slider, Socials, Files) ---
-// (Keeping existing logic for brevity - it remains unchanged)
 const formatLastUpdated = (dateString) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
@@ -220,53 +260,77 @@ const discardChanges = () => { if(confirm("Discard all unsaved text changes?")) 
           
           <div class="col-12">
               <div class="card border-0 shadow-sm p-4 bg-white">
+                  
                   <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
                       <div class="d-flex align-items-center gap-3">
                           <button @click="isLogsExpanded = !isLogsExpanded" class="btn btn-light rounded-circle border shadow-sm p-0 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                <span v-if="isLogsExpanded">−</span>
-                                <span v-else>+</span>
+                                <span class="fw-bold text-navy">{{ isLogsExpanded ? '−' : '+' }}</span>
                           </button>
                           <div>
-                              <h5 class="fw-bold text-navy mb-1">User Activity Intelligence</h5>
-                              <p class="text-muted small mb-0">Live tracking • {{ isLogsExpanded ? 'Expanded View' : 'Minimized' }}</p>
+                              <h5 class="fw-bold text-navy mb-1">Live Analytics & Reporting</h5>
+                              <p class="text-muted small mb-0">Track engagement, visualize trends, and export data.</p>
                           </div>
                       </div>
                       
-                      <div class="d-flex gap-2 align-items-center">
-                          <div class="dropdown-wrapper d-flex align-items-center gap-2">
-                              <span class="small fw-bold text-muted text-uppercase d-none d-md-block">Download Report:</span>
-                              <select class="form-select form-select-sm fw-bold border-success text-success" @change="handleReportSelect" :disabled="isGeneratingReport" style="width: 160px;">
-                                  <option value="" selected>{{ isGeneratingReport ? 'Generating...' : 'Select Month' }}</option>
-                                  <option v-for="m in reportMonths" :key="m.value" :value="m.value">
-                                      {{ m.label }}
-                                  </option>
-                              </select>
-                          </div>
-
-                          <button @click="openFirestoreConsole" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
-                              <span>⚙️</span> DB
+                      <div class="d-flex gap-2 align-items-center bg-light p-2 rounded border">
+                          <select v-model="reportType" class="form-select form-select-sm border-0 bg-transparent fw-bold text-navy" style="width: 100px;">
+                              <option value="daily">Daily</option>
+                              <option value="monthly">Monthly</option>
+                          </select>
+                          
+                          <input v-if="reportType === 'daily'" v-model="reportPeriod" type="date" class="form-control form-control-sm">
+                          <input v-if="reportType === 'monthly'" v-model="reportPeriod" type="month" class="form-control form-control-sm">
+                          
+                          <button @click="generateReport" class="btn btn-success btn-sm fw-bold d-flex align-items-center gap-2" :disabled="isGeneratingReport">
+                              <span v-if="isGeneratingReport" class="spinner-border spinner-border-sm"></span>
+                              <span v-else>⬇ Export</span>
                           </button>
                       </div>
+
+                      <button @click="openFirestoreConsole" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
+                          <span>⚙️</span> DB
+                      </button>
                   </div>
 
                   <div v-if="isLogsExpanded" class="fade-in">
-                      <div class="row g-3 mb-4">
-                          <div class="col-md-4">
-                              <div class="p-3 bg-light-navy rounded border border-navy">
-                                  <h3 class="fw-bold text-navy mb-0">{{ analytics.total }}</h3>
-                                  <small class="text-muted fw-bold text-uppercase">Total Interactions</small>
+                      
+                      <div class="row g-4 mb-4">
+                          <div class="col-lg-4">
+                              <div class="row g-3 h-100">
+                                  <div class="col-12">
+                                    <div class="p-3 bg-light-navy rounded border border-navy h-100 d-flex flex-column justify-content-center">
+                                        <h2 class="fw-bold text-navy mb-0">{{ analytics.total }}</h2>
+                                        <small class="text-muted fw-bold text-uppercase">Total Interactions</small>
+                                    </div>
+                                  </div>
+                                  <div class="col-6">
+                                    <div class="p-3 bg-light rounded border">
+                                        <h4 class="fw-bold text-success mb-0">{{ analytics.logins }}</h4>
+                                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">Logins</small>
+                                    </div>
+                                  </div>
+                                  <div class="col-6">
+                                    <div class="p-3 bg-light rounded border">
+                                        <h4 class="fw-bold text-primary mb-0">{{ analytics.contentViews }}</h4>
+                                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">Views</small>
+                                    </div>
+                                  </div>
                               </div>
                           </div>
-                          <div class="col-md-4">
-                              <div class="p-3 bg-light rounded border">
-                                  <h3 class="fw-bold text-success mb-0">{{ analytics.logins }}</h3>
-                                  <small class="text-muted fw-bold text-uppercase">Logins</small>
-                              </div>
-                          </div>
-                          <div class="col-md-4">
-                              <div class="p-3 bg-light rounded border">
-                                  <h3 class="fw-bold text-primary mb-0">{{ analytics.contentViews }}</h3>
-                                  <small class="text-muted fw-bold text-uppercase">Content Views</small>
+
+                          <div class="col-lg-8">
+                              <div class="p-3 border rounded bg-white h-100">
+                                  <div class="d-flex justify-content-between align-items-end mb-2">
+                                      <small class="fw-bold text-muted">ACTIVITY TREND (LAST 7 DAYS)</small>
+                                  </div>
+                                  <div class="d-flex align-items-end justify-content-between" style="height: 120px;">
+                                      <div v-for="day in chartData" :key="day.date" class="d-flex flex-column align-items-center" style="width: 12%;">
+                                          <div class="bg-navy rounded-top w-100 position-relative chart-bar" :style="{ height: day.height, minHeight: '4px', opacity: day.count > 0 ? 1 : 0.2 }">
+                                              <div class="bar-tooltip">{{ day.count }}</div>
+                                          </div>
+                                          <small class="text-muted mt-2" style="font-size: 0.7rem;">{{ day.date }}</small>
+                                      </div>
+                                  </div>
                               </div>
                           </div>
                       </div>
@@ -275,24 +339,25 @@ const discardChanges = () => { if(confirm("Discard all unsaved text changes?")) 
                           <table class="table table-hover align-middle mb-0">
                               <thead class="bg-light sticky-top">
                                   <tr>
-                                      <th class="small text-muted text-uppercase">Time</th>
+                                      <th class="small text-muted text-uppercase ps-3">Time</th>
                                       <th class="small text-muted text-uppercase">User</th>
+                                      <th class="small text-muted text-uppercase">Role</th>
                                       <th class="small text-muted text-uppercase">Action</th>
                                       <th class="small text-muted text-uppercase">Details</th>
                                   </tr>
                               </thead>
                               <tbody>
                                   <tr v-if="isLoadingLogs">
-                                      <td colspan="4" class="text-center p-4 text-muted">
+                                      <td colspan="5" class="text-center p-4 text-muted">
                                           <span class="spinner-border spinner-border-sm text-navy" role="status"></span>
                                           Connecting to live feed...
                                       </td>
                                   </tr>
                                   <tr v-else-if="activityLogs.length === 0">
-                                      <td colspan="4" class="text-center p-4 text-muted">No activity recorded yet.</td>
+                                      <td colspan="5" class="text-center p-4 text-muted">No activity recorded yet.</td>
                                   </tr>
                                   <tr v-for="log in activityLogs" :key="log.id">
-                                      <td class="small text-muted text-nowrap">{{ log.time }}</td>
+                                      <td class="small text-muted text-nowrap ps-3">{{ log.time }}</td>
                                       <td>
                                           <div class="d-flex align-items-center gap-2">
                                               <div class="bg-light-navy text-navy rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 24px; height: 24px;">
@@ -301,7 +366,8 @@ const discardChanges = () => { if(confirm("Discard all unsaved text changes?")) 
                                               <span class="small fw-bold">{{ log.userName || log.userEmail }}</span>
                                           </div>
                                       </td>
-                                      <td><span class="badge bg-light text-dark border">{{ log.action }}</span></td>
+                                      <td><span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ log.userRole || 'User' }}</span></td>
+                                      <td><span class="badge bg-white text-dark border">{{ log.action }}</span></td>
                                       <td class="small text-muted">{{ log.details }}</td>
                                   </tr>
                               </tbody>
@@ -495,6 +561,31 @@ const discardChanges = () => { if(confirm("Discard all unsaved text changes?")) 
 .preview-container { min-height: 300px; height: 100%; }
 .ls-2 { letter-spacing: 2px; }
 .fade-in { animation: fadeIn 0.3s ease-in-out; }
+
+/* CHART STYLES */
+.chart-bar {
+    transition: height 0.5s ease;
+}
+.chart-bar:hover .bar-tooltip {
+    opacity: 1;
+    top: -25px;
+}
+.bar-tooltip {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a2b49;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    opacity: 0;
+    transition: all 0.2s;
+    pointer-events: none;
+}
+
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (min-width: 992px) {

@@ -86,12 +86,16 @@ export const store = reactive({
       }
   },
 
-  addResource(fileData) {
-      if (!this.content.resources) this.content.resources = [];
-      this.content.resources.unshift(fileData);
-      this.saveContent();
-  },
-
+// Inside src/store.js
+addResource(resource) {
+    if (!this.content.resources) this.content.resources = [];
+    
+    // Ensure the resource is added to the list
+    this.content.resources.unshift(resource);
+    
+    // Immediately save to Firebase so it's permanent
+    this.saveContent();
+},
   deleteResource(index) {
       this.content.resources.splice(index, 1);
       this.saveContent();
