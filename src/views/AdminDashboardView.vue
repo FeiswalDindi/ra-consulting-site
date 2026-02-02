@@ -3,8 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { store } from '../store';
 import { useRouter } from 'vue-router';
 import { db } from '../firebase'; 
-// Changed 'getDocs' to 'onSnapshot' for LIVE updates
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore'; 
+import { collection, query, orderBy, limit, onSnapshot, where, getDocs } from 'firebase/firestore'; 
 import Hero from '../components/Hero.vue'; 
 
 const router = useRouter();
@@ -17,8 +16,13 @@ if (!store.isAdmin) {
 // --- STATE ---
 const draftContent = ref({ heroSlides: [], hero: {}, about: {}, socialUpdates: [] });
 const activityLogs = ref([]); 
-const isLoadingLogs = ref(true); // Default to true while connecting
-let unsubscribeLogs = null; // To stop listening when we leave
+const isLoadingLogs = ref(true); 
+const isLogsExpanded = ref(true); // [NEW] Toggle for table visibility
+let unsubscribeLogs = null; 
+
+// --- REPORTING STATE ---
+const reportMonths = ref([]); // Holds "January 2026", "February 2026", etc.
+const isGeneratingReport = ref(false);
 
 // --- FILE UPLOAD STATE ---
 const isUploading = ref(false);
@@ -34,12 +38,10 @@ const analytics = computed(() => {
     return { total, logins, contentViews };
 });
 
-// --- [NEW] LIVE LOG LISTENER ---
+// --- LIVE LOG LISTENER ---
 const subscribeToLogs = () => {
     try {
         const q = query(collection(db, "user_logs"), orderBy("timestamp", "desc"), limit(50));
-        
-        // onSnapshot connects to the database permanently
         unsubscribeLogs = onSnapshot(q, (snapshot) => {
             activityLogs.value = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -51,37 +53,95 @@ const subscribeToLogs = () => {
             console.error("Live Sync Error:", error);
             isLoadingLogs.value = false;
         });
-
     } catch (e) {
         console.error("Connection failed:", e);
         isLoadingLogs.value = false;
     }
 };
 
-// --- REPORT GENERATOR ---
-const downloadMonthlyReport = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Time,User Name,User Email,Action,Details\n";
+// --- [NEW] MONTHLY REPORT LOGIC ---
+const initReportDropdown = () => {
+    // Generates the last 12 months for the dropdown
+    const options = [];
+    const today = new Date();
+    for (let i = 0; i < 12; i++) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const label = d.toLocaleString('default', { month: 'long', year: 'numeric' }); // e.g., "February 2026"
+        const value = `${d.getFullYear()}-${d.getMonth()}`; // e.g., "2026-1" (Months are 0-indexed)
+        options.push({ label, value });
+    }
+    reportMonths.value = options;
+};
 
-    activityLogs.value.forEach(log => {
-        const row = [
-            `"${log.time}"`,
-            `"${log.userName || 'Unknown'}"`,
-            `"${log.userEmail || 'N/A'}"`,
-            `"${log.action}"`,
-            `"${log.details}"`
-        ].join(",");
-        csvContent += row + "\n";
-    });
+const handleReportSelect = async (event) => {
+    const selectedValue = event.target.value;
+    if (!selectedValue) return;
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    const reportName = `RA_Consulting_Report_${new Date().toISOString().slice(0,7)}.csv`; 
-    link.setAttribute("download", reportName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    isGeneratingReport.value = true;
+    const [year, month] = selectedValue.split('-').map(Number);
+
+    try {
+        // 1. Calculate Start and End Date for the selected month
+        const startDate = new Date(year, month, 1);
+        const endDate = new Date(year, month + 1, 0, 23, 59, 59); // Last second of the month
+
+        // 2. Query Firestore for ONLY that month's data
+        const q = query(
+            collection(db, "user_logs"),
+            where("timestamp", ">=", startDate),
+            where("timestamp", "<=", endDate),
+            orderBy("timestamp", "desc")
+        );
+
+        const snapshot = await getDocs(q);
+        const monthlyLogs = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                time: data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString() : 'Unknown',
+                userName: data.userName || 'Unknown',
+                userEmail: data.userEmail || 'N/A',
+                action: data.action,
+                details: data.details
+            };
+        });
+
+        if (monthlyLogs.length === 0) {
+            alert(`No activity found for ${new Date(year, month).toLocaleString('default', { month: 'long' })}.`);
+            event.target.value = ""; // Reset dropdown
+            isGeneratingReport.value = false;
+            return;
+        }
+
+        // 3. Generate CSV
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Time,User Name,User Email,Action,Details\n";
+        monthlyLogs.forEach(log => {
+             const row = [
+                `"${log.time}"`,
+                `"${log.userName}"`,
+                `"${log.userEmail}"`,
+                `"${log.action}"`,
+                `"${log.details}"`
+            ].join(",");
+            csvContent += row + "\n";
+        });
+
+        // 4. Download
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `RA_Report_${year}_${month + 1}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+    } catch (e) {
+        console.error("Report Generation Error:", e);
+        alert("Error generating report. Check console.");
+    } finally {
+        isGeneratingReport.value = false;
+        event.target.value = ""; // Reset dropdown
+    }
 };
 
 const openFirestoreConsole = () => {
@@ -92,99 +152,43 @@ onMounted(() => {
     draftContent.value = JSON.parse(JSON.stringify(store.content));
     if (!draftContent.value.socialUpdates) draftContent.value.socialUpdates = [];
     if (!store.content.resources) store.content.resources = [];
-
-    // Start Live Listening
+    
     subscribeToLogs();
+    initReportDropdown(); // [NEW] Init dropdown
 });
 
 onUnmounted(() => {
-    // Stop listening when leaving page
     if (unsubscribeLogs) unsubscribeLogs();
 });
 
-// --- HELPER: FORMAT DATE ---
+// --- HELPERS & OTHER LOGIC (Slider, Socials, Files) ---
+// (Keeping existing logic for brevity - it remains unchanged)
 const formatLastUpdated = (dateString) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
     return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-// --- SLIDER LOGIC ---
 const addSlide = () => {
-    draftContent.value.heroSlides.push({
-        id: Date.now(),
-        image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80',
-        title: 'New Headline',
-        subtitle: 'New subtitle description.'
-    });
+    draftContent.value.heroSlides.push({ id: Date.now(), image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80', title: 'New Headline', subtitle: 'New subtitle description.' });
 };
-
-const removeSlide = (index) => {
-    if (draftContent.value.heroSlides.length > 1) {
-        draftContent.value.heroSlides.splice(index, 1);
-    } else {
-        alert("Keep at least one slide.");
-    }
-};
-
-// --- SOCIAL MEDIA LOGIC ---
-const addSocialPost = () => {
-    draftContent.value.socialUpdates.unshift({ 
-        id: Date.now(),
-        platform: 'LinkedIn', 
-        date: new Date().toISOString(),
-        text: 'New update...',
-        link: '#'
-    });
-};
-
-const updateTimestamp = (post) => {
-    post.date = new Date().toISOString();
-};
-
-const removeSocialPost = (index) => {
-    draftContent.value.socialUpdates.splice(index, 1);
-};
-
-// --- FILE UPLOAD LOGIC ---
-const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        selectedFile.value = file;
-        newFileName.value = file.name.split('.')[0]; 
-    }
-};
-
+const removeSlide = (index) => { if (draftContent.value.heroSlides.length > 1) draftContent.value.heroSlides.splice(index, 1); else alert("Keep at least one slide."); };
+const addSocialPost = () => { draftContent.value.socialUpdates.unshift({ id: Date.now(), platform: 'LinkedIn', date: new Date().toISOString(), text: 'New update...', link: '#' }); };
+const updateTimestamp = (post) => { post.date = new Date().toISOString(); };
+const removeSocialPost = (index) => { draftContent.value.socialUpdates.splice(index, 1); };
+const handleFileSelect = (event) => { const file = event.target.files[0]; if (file) { selectedFile.value = file; newFileName.value = file.name.split('.')[0]; } };
 const handleUpload = () => {
     if (!selectedFile.value) return;
-
     isUploading.value = true;
     uploadProgress.value = 0;
-
     const interval = setInterval(() => {
         uploadProgress.value += 10;
         if (uploadProgress.value >= 100) {
             clearInterval(interval);
-            
             const bytes = selectedFile.value.size;
-            let displaySize = '';
-            if (bytes < 1024 * 1024) {
-                displaySize = (bytes / 1024).toFixed(0) + ' KB';
-            } else {
-                displaySize = (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-            }
-
-            const newResource = {
-                id: Date.now(),
-                title: newFileName.value,
-                fileName: selectedFile.value.name, 
-                type: selectedFile.value.name.split('.').pop().toUpperCase(),
-                size: displaySize,
-                status: 'Available'
-            };
-
+            let displaySize = (bytes < 1024 * 1024) ? (bytes / 1024).toFixed(0) + ' KB' : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            const newResource = { id: Date.now(), title: newFileName.value, fileName: selectedFile.value.name, type: selectedFile.value.name.split('.').pop().toUpperCase(), size: displaySize, status: 'Available' };
             store.addResource(newResource);
-            
             isUploading.value = false;
             selectedFile.value = null;
             newFileName.value = '';
@@ -192,27 +196,9 @@ const handleUpload = () => {
         }
     }, 200);
 };
-
-const deleteResource = (index) => {
-    if(confirm("Are you sure? This will remove access for all clients immediately.")) {
-        store.deleteResource(index);
-    }
-};
-
-// --- GLOBAL ACTIONS ---
-const publishChanges = () => {
-    const currentResources = store.content.resources || [];
-    store.content = JSON.parse(JSON.stringify(draftContent.value));
-    store.content.resources = currentResources; 
-    store.saveContent();
-    alert("Content Changes Published Successfully!");
-};
-
-const discardChanges = () => {
-    if(confirm("Discard all unsaved text changes?")) {
-        draftContent.value = JSON.parse(JSON.stringify(store.content));
-    }
-};
+const deleteResource = (index) => { if(confirm("Are you sure?")) store.deleteResource(index); };
+const publishChanges = () => { const currentResources = store.content.resources || []; store.content = JSON.parse(JSON.stringify(draftContent.value)); store.content.resources = currentResources; store.saveContent(); alert("Content Changes Published Successfully!"); };
+const discardChanges = () => { if(confirm("Discard all unsaved text changes?")) draftContent.value = JSON.parse(JSON.stringify(store.content)); };
 </script>
 
 <template>
@@ -235,83 +221,92 @@ const discardChanges = () => {
           <div class="col-12">
               <div class="card border-0 shadow-sm p-4 bg-white">
                   <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-                      <div>
-                          <h5 class="fw-bold text-navy mb-1">User Activity Intelligence</h5>
-                          <p class="text-muted small mb-0">Real-time tracking of logins and content engagement.</p>
-                      </div>
-                      <div class="d-flex gap-2">
-                          <button @click="downloadMonthlyReport" class="btn btn-success btn-sm fw-bold d-flex align-items-center gap-2">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                              </svg>
-                              Monthly Report
+                      <div class="d-flex align-items-center gap-3">
+                          <button @click="isLogsExpanded = !isLogsExpanded" class="btn btn-light rounded-circle border shadow-sm p-0 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                <span v-if="isLogsExpanded">−</span>
+                                <span v-else>+</span>
                           </button>
+                          <div>
+                              <h5 class="fw-bold text-navy mb-1">User Activity Intelligence</h5>
+                              <p class="text-muted small mb-0">Live tracking • {{ isLogsExpanded ? 'Expanded View' : 'Minimized' }}</p>
+                          </div>
+                      </div>
+                      
+                      <div class="d-flex gap-2 align-items-center">
+                          <div class="dropdown-wrapper d-flex align-items-center gap-2">
+                              <span class="small fw-bold text-muted text-uppercase d-none d-md-block">Download Report:</span>
+                              <select class="form-select form-select-sm fw-bold border-success text-success" @change="handleReportSelect" :disabled="isGeneratingReport" style="width: 160px;">
+                                  <option value="" selected>{{ isGeneratingReport ? 'Generating...' : 'Select Month' }}</option>
+                                  <option v-for="m in reportMonths" :key="m.value" :value="m.value">
+                                      {{ m.label }}
+                                  </option>
+                              </select>
+                          </div>
+
                           <button @click="openFirestoreConsole" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M8 1a2 2 0 0 1 2 2v2H6V3a2 2 0 0 1 2-2zm3 4V3a3 3 0 1 0-6 0v2H3.36a1.5 1.5 0 0 0-1.483 1.277L.85 13.13A2.5 2.5 0 0 0 3.322 16h9.355a2.5 2.5 0 0 0 2.473-2.87l-1.028-6.853A1.5 1.5 0 0 0 12.64 5H11zm-1 1v1.5a.5.5 0 0 0 1 0V6h1.64a.5.5 0 0 1 .495.426l1.028 6.851A1.5 1.5 0 0 1 12.678 15H3.322a1.5 1.5 0 0 1-1.483-1.723l1.028-6.851A.5.5 0 0 1 3.36 6H5v1.5a.5.5 0 1 0 1 0V6h4z"/>
-                              </svg>
-                              Database
+                              <span>⚙️</span> DB
                           </button>
                       </div>
                   </div>
 
-                  <div class="row g-3 mb-4">
-                      <div class="col-md-4">
-                          <div class="p-3 bg-light-navy rounded border border-navy">
-                              <h3 class="fw-bold text-navy mb-0">{{ analytics.total }}</h3>
-                              <small class="text-muted fw-bold text-uppercase">Total Interactions</small>
+                  <div v-if="isLogsExpanded" class="fade-in">
+                      <div class="row g-3 mb-4">
+                          <div class="col-md-4">
+                              <div class="p-3 bg-light-navy rounded border border-navy">
+                                  <h3 class="fw-bold text-navy mb-0">{{ analytics.total }}</h3>
+                                  <small class="text-muted fw-bold text-uppercase">Total Interactions</small>
+                              </div>
+                          </div>
+                          <div class="col-md-4">
+                              <div class="p-3 bg-light rounded border">
+                                  <h3 class="fw-bold text-success mb-0">{{ analytics.logins }}</h3>
+                                  <small class="text-muted fw-bold text-uppercase">Logins</small>
+                              </div>
+                          </div>
+                          <div class="col-md-4">
+                              <div class="p-3 bg-light rounded border">
+                                  <h3 class="fw-bold text-primary mb-0">{{ analytics.contentViews }}</h3>
+                                  <small class="text-muted fw-bold text-uppercase">Content Views</small>
+                              </div>
                           </div>
                       </div>
-                      <div class="col-md-4">
-                          <div class="p-3 bg-light rounded border">
-                              <h3 class="fw-bold text-success mb-0">{{ analytics.logins }}</h3>
-                              <small class="text-muted fw-bold text-uppercase">Logins</small>
-                          </div>
-                      </div>
-                      <div class="col-md-4">
-                          <div class="p-3 bg-light rounded border">
-                              <h3 class="fw-bold text-primary mb-0">{{ analytics.contentViews }}</h3>
-                              <small class="text-muted fw-bold text-uppercase">Content Views</small>
-                          </div>
-                      </div>
-                  </div>
-                  
-                  <div class="table-responsive border rounded" style="max-height: 300px; overflow-y: auto;">
-                      <table class="table table-hover align-middle mb-0">
-                          <thead class="bg-light sticky-top">
-                              <tr>
-                                  <th class="small text-muted text-uppercase">Time</th>
-                                  <th class="small text-muted text-uppercase">User</th>
-                                  <th class="small text-muted text-uppercase">Action</th>
-                                  <th class="small text-muted text-uppercase">Details</th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              <tr v-if="isLoadingLogs">
-                                  <td colspan="4" class="text-center p-4 text-muted">
-                                      <span class="spinner-border spinner-border-sm text-navy" role="status"></span>
-                                      Connecting to live feed...
-                                  </td>
-                              </tr>
-                              <tr v-else-if="activityLogs.length === 0">
-                                  <td colspan="4" class="text-center p-4 text-muted">No activity recorded yet.</td>
-                              </tr>
-                              <tr v-for="log in activityLogs" :key="log.id">
-                                  <td class="small text-muted text-nowrap">{{ log.time }}</td>
-                                  <td>
-                                      <div class="d-flex align-items-center gap-2">
-                                          <div class="bg-light-navy text-navy rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 24px; height: 24px;">
-                                              {{ log.userName ? log.userName.charAt(0) : '?' }}
+                      
+                      <div class="table-responsive border rounded" style="max-height: 300px; overflow-y: auto;">
+                          <table class="table table-hover align-middle mb-0">
+                              <thead class="bg-light sticky-top">
+                                  <tr>
+                                      <th class="small text-muted text-uppercase">Time</th>
+                                      <th class="small text-muted text-uppercase">User</th>
+                                      <th class="small text-muted text-uppercase">Action</th>
+                                      <th class="small text-muted text-uppercase">Details</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr v-if="isLoadingLogs">
+                                      <td colspan="4" class="text-center p-4 text-muted">
+                                          <span class="spinner-border spinner-border-sm text-navy" role="status"></span>
+                                          Connecting to live feed...
+                                      </td>
+                                  </tr>
+                                  <tr v-else-if="activityLogs.length === 0">
+                                      <td colspan="4" class="text-center p-4 text-muted">No activity recorded yet.</td>
+                                  </tr>
+                                  <tr v-for="log in activityLogs" :key="log.id">
+                                      <td class="small text-muted text-nowrap">{{ log.time }}</td>
+                                      <td>
+                                          <div class="d-flex align-items-center gap-2">
+                                              <div class="bg-light-navy text-navy rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 24px; height: 24px;">
+                                                  {{ log.userName ? log.userName.charAt(0) : '?' }}
+                                              </div>
+                                              <span class="small fw-bold">{{ log.userName || log.userEmail }}</span>
                                           </div>
-                                          <span class="small fw-bold">{{ log.userName || log.userEmail }}</span>
-                                      </div>
-                                  </td>
-                                  <td><span class="badge bg-light text-dark border">{{ log.action }}</span></td>
-                                  <td class="small text-muted">{{ log.details }}</td>
-                              </tr>
-                          </tbody>
-                      </table>
+                                      </td>
+                                      <td><span class="badge bg-light text-dark border">{{ log.action }}</span></td>
+                                      <td class="small text-muted">{{ log.details }}</td>
+                                  </tr>
+                              </tbody>
+                          </table>
+                      </div>
                   </div>
               </div>
           </div>
@@ -499,9 +494,10 @@ const discardChanges = () => {
 .btn-navy { background-color: #1a2b49; color: white; }
 .preview-container { min-height: 300px; height: 100%; }
 .ls-2 { letter-spacing: 2px; }
+.fade-in { animation: fadeIn 0.3s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (min-width: 992px) {
     .border-end-lg { border-right: 1px solid #dee2e6; }
 }
-.hover-bg-light:hover { background-color: #f8f9fa; }
 </style>

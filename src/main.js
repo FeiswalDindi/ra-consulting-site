@@ -17,6 +17,19 @@ const app = createApp(App)
 // 2. Use the Router
 app.use(router)
 
+// --- [NEW] PASSIVE TRACKING CODE ---
+// This listens to every page navigation
+router.afterEach((to) => {
+    // Check if user is logged in
+    if (store.user) {
+        // Log the Page View
+        store.trackActivity(
+            "Page View", 
+            `User navigated to: ${to.name || to.path}`
+        );
+    }
+});
+
 // 3. Register the scroll directive
 app.directive('scroll-reveal', scrollReveal)
 

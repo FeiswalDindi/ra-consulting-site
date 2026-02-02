@@ -54,20 +54,33 @@ export const store = reactive({
     } catch (e) { console.error("Save failed", e); }
   },
 
-  // 2. [NEW] USER TRACKING SYSTEM
+// [UPDATED] TRACKING SYSTEM (Now tracks Guests too!)
   async trackActivity(actionType, details = "") {
-      if (!this.user) return; // Can only track logged-in users
-
       try {
-          // Creates a new entry in a "user_logs" collection in Firestore
+          // Determine User Identity
+          const identity = this.user ? {
+              name: this.user.displayName,
+              email: this.user.email,
+              role: 'Registered User'
+          } : {
+              name: 'Guest (Visitor)',
+              email: 'N/A',
+              role: 'Anonymous'
+          };
+
+          // Save to Firestore
           await addDoc(collection(db, "user_logs"), {
-              userEmail: this.user.email,
-              userName: this.user.displayName,
-              action: actionType, // e.g., "Login", "Downloaded File"
+              userEmail: identity.email,
+              userName: identity.name,
+              userRole: identity.role, // Helpful for filtering later
+              action: actionType,
               details: details,
-              timestamp: serverTimestamp() // Uses server time
+              timestamp: serverTimestamp()
           });
-          console.log(`Activity Tracked: ${actionType}`);
+          
+          // Optional: Log to console for your own debugging
+          console.log(`Tracked [${identity.role}]: ${actionType}`);
+
       } catch (e) {
           console.error("Tracking Error:", e);
       }
