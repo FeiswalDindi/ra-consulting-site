@@ -2,38 +2,31 @@ import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
 import router from './router'
-// 1. Import the directive
+import { store } from './store' // Import the store
 import scrollReveal from './directives/scrollReveal'
 
-// Import Bootstrap CSS and JS
+// Bootstrap
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 
-// --- FIX START ---
-
-// 1. Create the App Instance FIRST
 const app = createApp(App)
 
-// 2. Use the Router
+// 1. Initialize the Global Log Listener (So charts work immediately)
+store.initLogListener();
+
 app.use(router)
 
-// --- [NEW] PASSIVE TRACKING CODE ---
-// This listens to every page navigation
+// 2. TRACK EVERY PAGE VIEW (Guests + Users)
 router.afterEach((to) => {
-    // Check if user is logged in
-    if (store.user) {
-        // Log the Page View
-        store.trackActivity(
-            "Page View", 
-            `User navigated to: ${to.name || to.path}`
-        );
-    }
+    // We removed the 'if (store.user)' check. Now it tracks everyone.
+    store.trackActivity(
+        "Page View", 
+        `Viewed: ${to.name || to.path}`
+    );
 });
 
-// 3. Register the scroll directive
 app.directive('scroll-reveal', scrollReveal)
 
-// 4. Finally, mount the app to the screen
 app.mount('#app')
 
 // ---  END ---

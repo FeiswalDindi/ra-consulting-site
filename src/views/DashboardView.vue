@@ -172,8 +172,8 @@ const formatDate = (d) => {
                   <div class="support-pill bg-white-10 p-3 rounded-3 mb-4">
                       <div class="small fw-bold mb-1">Assigned Consultant:</div>
                       <div class="d-flex align-items-center gap-2">
-                          <img src="https://ui-avatars.com/api/?name=Feisal+Dindi&background=c5a059&color=fff" class="rounded-circle" width="24">
-                          <span>Feisal Dindi</span>
+                          <img src="https://ui-avatars.com/api/?name=General+Commitee&background=c5a059&color=fff" class="rounded-circle" width="24">
+                          <span>General Commitee</span>
                       </div>
                   </div>
                   <a :href="'mailto:info@rastrategicanalytics.com?subject=Consultation Request: ' + user.displayName" class="btn btn-gold w-100 fw-bold py-3 mt-auto">
@@ -220,10 +220,10 @@ const formatDate = (d) => {
 .bg-navy { background-color: #1a2b49; }
 .bg-light-navy { background-color: #f0f4f8; }
 .bg-white-10 { background-color: rgba(255,255,255,0.1); }
-.text-gold { color: #c5a059; }
+.text-gold { color: #889bec; }
 .text-sky { color: #0dcaf0; } /* Sky Blue Accent */
-.btn-gold { background-color: #c5a059; color: white; border: none; }
-.btn-gold:hover { background-color: #b38f4d; color: white; }
+.btn-gold { background-color: #8f90fa; color: white; border: none; }
+.btn-gold:hover { background-color: #136d22; color: white; }
 
 .btn-navy { background-color: #1a2b49; color: white; border: none; }
 .btn-navy-outline { border: 1.5px solid #1a2b49; color: #1a2b49; background: transparent; }

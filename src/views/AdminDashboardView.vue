@@ -1,244 +1,118 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { store } from '../store';
 import { useRouter } from 'vue-router';
-import { db } from '../firebase'; 
-import { collection, query, orderBy, limit, onSnapshot, where, getDocs } from 'firebase/firestore'; 
-import Hero from '../components/Hero.vue'; 
+
+// IMPORT SUB-COMPONENTS
+import AdminAnalytics from '../components/admin/AdminAnalytics.vue';
+import AdminHeroEditor from '../components/admin/AdminHeroEditor.vue';
+import AdminAboutEditor from '../components/admin/AdminAboutEditor.vue';
+import AdminSocialsEditor from '../components/admin/AdminSocialsEditor.vue';
+import AdminFileManager from '../components/admin/AdminFileManager.vue';
 
 const router = useRouter();
+if (!store.isAdmin) router.push('/');
 
-// Protect Route
-if (!store.isAdmin) {
-    router.push('/');
-}
+// --- DRAFT STATE ---
+const draftContent = ref(JSON.parse(JSON.stringify(store.content)));
+const isLogsExpanded = ref(true);
 
-// --- STATE ---
-const draftContent = ref({ heroSlides: [], hero: {}, about: {}, socialUpdates: [] });
-const activityLogs = ref([]); 
-const isLoadingLogs = ref(true); 
-const isLogsExpanded = ref(true); 
-let unsubscribeLogs = null; 
+// --- REPORTING STATE ---
+const showReportModal = ref(false);
+const reportType = ref('daily');
+const reportDate = ref(new Date().toISOString().slice(0, 10));
 
-// --- [NEW] REPORTING STATE (Flexible) ---
-const reportType = ref('monthly'); // 'daily', 'monthly', 'yearly'
-const reportPeriod = ref(''); // The selected date input
-const isGeneratingReport = ref(false);
-
-// --- FILE UPLOAD STATE ---
-const isUploading = ref(false);
-const uploadProgress = ref(0);
-const newFileName = ref('');
-const selectedFile = ref(null);
-
-// --- INTELLIGENT ANALYTICS ---
-const analytics = computed(() => {
-    const total = activityLogs.value.length;
-    const logins = activityLogs.value.filter(l => l.action === 'Login').length;
-    const contentViews = activityLogs.value.filter(l => l.action === 'Content Access').length;
-    return { total, logins, contentViews };
-});
-
-// --- [NEW] LIVE CHART DATA (Last 7 Days) ---
-const chartData = computed(() => {
-    const days = {};
-    const today = new Date();
-    
-    // 1. Initialize last 7 days with 0
-    for(let i=6; i>=0; i--) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        const key = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        days[key] = 0;
-    }
-
-    // 2. Count logs
-    activityLogs.value.forEach(log => {
-        if (!log.timestamp) return;
-        const date = new Date(log.timestamp.seconds * 1000);
-        const key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        if (days[key] !== undefined) {
-            days[key]++;
+// Sync Data Logic (Ensures editors aren't empty)
+watch(() => store.content, (newVal) => {
+    if (newVal) {
+        const currentDraft = JSON.stringify(draftContent.value);
+        const currentStore = JSON.stringify(newVal);
+        if (currentDraft.length < 200 && currentStore.length > 200) {
+            draftContent.value = JSON.parse(currentStore);
         }
-    });
-
-    // 3. Find Max for scaling
-    const maxVal = Math.max(...Object.values(days), 1); 
-
-    return Object.keys(days).map(date => ({
-        date,
-        count: days[date],
-        height: (days[date] / maxVal) * 100 + '%'
-    }));
-});
-
-// --- LIVE LOG LISTENER ---
-const subscribeToLogs = () => {
-    try {
-        // Increased limit to 100 to feed the chart better data
-        const q = query(collection(db, "user_logs"), orderBy("timestamp", "desc"), limit(100));
-        unsubscribeLogs = onSnapshot(q, (snapshot) => {
-            activityLogs.value = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                time: doc.data().timestamp ? new Date(doc.data().timestamp.seconds * 1000).toLocaleString() : 'Just now'
-            }));
-            isLoadingLogs.value = false;
-        }, (error) => {
-            console.error("Live Sync Error:", error);
-            isLoadingLogs.value = false;
-        });
-    } catch (e) {
-        console.error("Connection failed:", e);
-        isLoadingLogs.value = false;
+        // Safety defaults
+        if (!draftContent.value.heroSlides) draftContent.value.heroSlides = [];
+        if (!draftContent.value.socialUpdates) draftContent.value.socialUpdates = [];
+        if (!draftContent.value.about) draftContent.value.about = { title: '', text: '' };
     }
+}, { deep: true, immediate: true });
+
+// --- ACTIONS ---
+const publishChanges = () => {
+    store.content = JSON.parse(JSON.stringify(draftContent.value));
+    store.saveContent();
+    store.trackActivity("CMS Update", "Admin published global content changes");
+    alert("✅ Changes Published Live!");
 };
 
-// --- [NEW] FLEXIBLE REPORT GENERATOR ---
-const generateReport = async () => {
-    if (!reportPeriod.value) {
-        alert("Please select a date/month first.");
+const discardChanges = () => {
+    if(confirm("Discard all unsaved changes?")) draftContent.value = JSON.parse(JSON.stringify(store.content));
+};
+
+const goToFirestore = () => window.open('https://console.firebase.google.com/', '_blank');
+
+// --- REPORTING LOGIC ---
+const openReportModal = () => { showReportModal.value = true; };
+const closeReportModal = () => { showReportModal.value = false; };
+
+const generateReport = () => {
+    // 1. Filter Logs
+    const selected = new Date(reportDate.value);
+    let filteredLogs = [];
+    let filename = "Report.csv";
+
+    // Helper: Safely get date object from log
+    const getLogDate = (log) => {
+        if (log.timestamp && log.timestamp.seconds) return new Date(log.timestamp.seconds * 1000);
+        if (log.rawDate) return new Date(log.rawDate);
+        return new Date();
+    };
+
+    if (reportType.value === 'daily') {
+        filename = `Daily_Report_${reportDate.value}.csv`;
+        filteredLogs = store.activityLogs.filter(log => {
+            const d = getLogDate(log);
+            return d.toISOString().slice(0, 10) === reportDate.value;
+        });
+    } else if (reportType.value === 'weekly') {
+        filename = `Weekly_Report_${reportDate.value}.csv`;
+        const start = new Date(reportDate.value);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 7);
+        filteredLogs = store.activityLogs.filter(log => {
+            const d = getLogDate(log);
+            return d >= start && d <= end;
+        });
+    } else if (reportType.value === 'monthly') {
+        filename = `Monthly_Report_${reportDate.value}.csv`;
+        const [year, month] = reportDate.value.split('-');
+        filteredLogs = store.activityLogs.filter(log => {
+            const d = getLogDate(log);
+            return d.getFullYear() === parseInt(year) && (d.getMonth() + 1) === parseInt(month);
+        });
+    }
+
+    if (filteredLogs.length === 0) {
+        alert("No records found for this period.");
         return;
     }
 
-    isGeneratingReport.value = true;
-    try {
-        let startDate, endDate, filename;
-        const selectedDate = new Date(reportPeriod.value);
-
-        // 1. Determine Date Range
-        if (reportType.value === 'daily') {
-            startDate = new Date(selectedDate.setHours(0,0,0,0));
-            endDate = new Date(selectedDate.setHours(23,59,59,999));
-            filename = `Daily_Report_${reportPeriod.value}`;
-        } 
-        else if (reportType.value === 'monthly') {
-            const [y, m] = reportPeriod.value.split('-');
-            startDate = new Date(y, m - 1, 1);
-            endDate = new Date(y, m, 0, 23, 59, 59);
-            filename = `Monthly_Report_${reportPeriod.value}`;
-        }
-        else if (reportType.value === 'yearly') {
-            // Simplistic yearly handling (assumes user picks any date in that year via date picker or manual entry)
-            // For a robust UI, you'd use a simple number input for year, but sticking to existing logic:
-             const y = selectedDate.getFullYear();
-             startDate = new Date(y, 0, 1);
-             endDate = new Date(y, 11, 31, 23, 59, 59);
-             filename = `Yearly_Report_${y}`;
-        }
-
-        // 2. Query Database
-        const q = query(
-            collection(db, "user_logs"),
-            where("timestamp", ">=", startDate),
-            where("timestamp", "<=", endDate),
-            orderBy("timestamp", "desc")
-        );
-
-        const snapshot = await getDocs(q);
-        const logs = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                time: data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString() : 'Unknown',
-                userName: data.userName || 'Unknown',
-                userEmail: data.userEmail || 'N/A',
-                userRole: data.userRole || 'User',
-                action: data.action,
-                details: data.details
-            };
-        });
-
-        if (logs.length === 0) {
-            alert("No activity found for this period.");
-            isGeneratingReport.value = false;
-            return;
-        }
-
-        // 3. Generate CSV
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Time,User Name,Email,Role,Action,Details\n";
-        logs.forEach(log => {
-             const row = [
-                `"${log.time}"`,
-                `"${log.userName}"`,
-                `"${log.userEmail}"`,
-                `"${log.userRole}"`,
-                `"${log.action}"`,
-                `"${log.details}"`
-            ].join(",");
-            csvContent += row + "\n";
-        });
-
-        // 4. Download
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `${filename}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-    } catch (e) {
-        console.error("Report Generation Error:", e);
-        alert("Error generating report. Check console.");
-    } finally {
-        isGeneratingReport.value = false;
-    }
-};
-
-const openFirestoreConsole = () => {
-    window.open('https://console.firebase.google.com/u/0/project/ra-consulting-app/firestore/data/~2Fuser_logs', '_blank');
-};
-
-onMounted(() => {
-    draftContent.value = JSON.parse(JSON.stringify(store.content));
-    if (!draftContent.value.socialUpdates) draftContent.value.socialUpdates = [];
-    if (!store.content.resources) store.content.resources = [];
+    // 2. Create CSV
+    const headers = ["Time", "User", "Role", "Action", "Details"];
+    const rows = filteredLogs.map(log => [
+        `"${log.time}"`, `"${log.userName}"`, `"${log.userRole}"`, `"${log.action}"`, `"${log.details.replace(/"/g, '""')}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
     
-    subscribeToLogs();
-});
-
-onUnmounted(() => {
-    if (unsubscribeLogs) unsubscribeLogs();
-});
-
-// --- HELPERS & OTHER LOGIC (Slider, Socials, Files) ---
-const formatLastUpdated = (dateString) => {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString;
-    return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    // 3. Trigger Download
+    const link = document.createElement("a");
+    link.href = encodeURI(csvContent);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    closeReportModal();
 };
-
-const addSlide = () => {
-    draftContent.value.heroSlides.push({ id: Date.now(), image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80', title: 'New Headline', subtitle: 'New subtitle description.' });
-};
-const removeSlide = (index) => { if (draftContent.value.heroSlides.length > 1) draftContent.value.heroSlides.splice(index, 1); else alert("Keep at least one slide."); };
-const addSocialPost = () => { draftContent.value.socialUpdates.unshift({ id: Date.now(), platform: 'LinkedIn', date: new Date().toISOString(), text: 'New update...', link: '#' }); };
-const updateTimestamp = (post) => { post.date = new Date().toISOString(); };
-const removeSocialPost = (index) => { draftContent.value.socialUpdates.splice(index, 1); };
-const handleFileSelect = (event) => { const file = event.target.files[0]; if (file) { selectedFile.value = file; newFileName.value = file.name.split('.')[0]; } };
-const handleUpload = () => {
-    if (!selectedFile.value) return;
-    isUploading.value = true;
-    uploadProgress.value = 0;
-    const interval = setInterval(() => {
-        uploadProgress.value += 10;
-        if (uploadProgress.value >= 100) {
-            clearInterval(interval);
-            const bytes = selectedFile.value.size;
-            let displaySize = (bytes < 1024 * 1024) ? (bytes / 1024).toFixed(0) + ' KB' : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-            const newResource = { id: Date.now(), title: newFileName.value, fileName: selectedFile.value.name, type: selectedFile.value.name.split('.').pop().toUpperCase(), size: displaySize, status: 'Available' };
-            store.addResource(newResource);
-            isUploading.value = false;
-            selectedFile.value = null;
-            newFileName.value = '';
-            alert("File published successfully to Client Portal.");
-        }
-    }, 200);
-};
-const deleteResource = (index) => { if(confirm("Are you sure?")) store.deleteResource(index); };
-const publishChanges = () => { const currentResources = store.content.resources || []; store.content = JSON.parse(JSON.stringify(draftContent.value)); store.content.resources = currentResources; store.saveContent(); alert("Content Changes Published Successfully!"); };
-const discardChanges = () => { if(confirm("Discard all unsaved text changes?")) draftContent.value = JSON.parse(JSON.stringify(store.content)); };
 </script>
 
 <template>
@@ -247,348 +121,112 @@ const discardChanges = () => { if(confirm("Discard all unsaved text changes?")) 
       
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-5 border-bottom pb-4 gap-3">
           <div class="text-center text-md-start">
-              <h6 class="text-danger fw-bold ls-2 small">ADMINISTRATION</h6>
-              <h1 class="display-6 fw-bold text-navy">Content Manager</h1>
+              <h6 class="text-sky fw-bold ls-2 small text-uppercase mb-1">Management Console</h6>
+              <h1 class="display-6 fw-bold text-navy">RA Dashboard</h1>
           </div>
-          <div class="d-flex gap-2">
-              <button @click="discardChanges" class="btn btn-outline-secondary btn-sm">Discard Drafts</button>
-              <button @click="publishChanges" class="btn btn-navy btn-sm fw-bold px-4">Publish Content</button>
+          <div class="d-flex flex-wrap gap-2 justify-content-center">
+              <button @click="goToFirestore" class="btn btn-white border shadow-sm btn-sm d-flex align-items-center gap-2 text-muted fw-bold">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
+                  <span>Database</span>
+              </button>
+              <button @click="openReportModal" class="btn btn-white border shadow-sm btn-sm d-flex align-items-center gap-2 text-muted fw-bold">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  <span>Export Reports</span>
+              </button>
+              <div class="vr mx-2 text-muted opacity-25"></div>
+              <button @click="discardChanges" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-2 fw-bold">Discard</button>
+              <button @click="publishChanges" class="btn btn-navy fw-bold px-4 d-flex align-items-center gap-2 shadow-sm">Publish All</button>
           </div>
       </div>
 
-      <div class="row g-4">
-          
-          <div class="col-12">
-              <div class="card border-0 shadow-sm p-4 bg-white">
-                  
-                  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
-                      <div class="d-flex align-items-center gap-3">
-                          <button @click="isLogsExpanded = !isLogsExpanded" class="btn btn-light rounded-circle border shadow-sm p-0 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                <span class="fw-bold text-navy">{{ isLogsExpanded ? '−' : '+' }}</span>
-                          </button>
-                          <div>
-                              <h5 class="fw-bold text-navy mb-1">Live Analytics & Reporting</h5>
-                              <p class="text-muted small mb-0">Track engagement, visualize trends, and export data.</p>
-                          </div>
-                      </div>
-                      
-                      <div class="d-flex gap-2 align-items-center bg-light p-2 rounded border">
-                          <select v-model="reportType" class="form-select form-select-sm border-0 bg-transparent fw-bold text-navy" style="width: 100px;">
-                              <option value="daily">Daily</option>
-                              <option value="monthly">Monthly</option>
-                          </select>
-                          
-                          <input v-if="reportType === 'daily'" v-model="reportPeriod" type="date" class="form-control form-control-sm">
-                          <input v-if="reportType === 'monthly'" v-model="reportPeriod" type="month" class="form-control form-control-sm">
-                          
-                          <button @click="generateReport" class="btn btn-success btn-sm fw-bold d-flex align-items-center gap-2" :disabled="isGeneratingReport">
-                              <span v-if="isGeneratingReport" class="spinner-border spinner-border-sm"></span>
-                              <span v-else>⬇ Export</span>
-                          </button>
-                      </div>
-
-                      <button @click="openFirestoreConsole" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
-                          <span>⚙️</span> DB
-                      </button>
-                  </div>
-
-                  <div v-if="isLogsExpanded" class="fade-in">
-                      
-                      <div class="row g-4 mb-4">
-                          <div class="col-lg-4">
-                              <div class="row g-3 h-100">
-                                  <div class="col-12">
-                                    <div class="p-3 bg-light-navy rounded border border-navy h-100 d-flex flex-column justify-content-center">
-                                        <h2 class="fw-bold text-navy mb-0">{{ analytics.total }}</h2>
-                                        <small class="text-muted fw-bold text-uppercase">Total Interactions</small>
-                                    </div>
-                                  </div>
-                                  <div class="col-6">
-                                    <div class="p-3 bg-light rounded border">
-                                        <h4 class="fw-bold text-success mb-0">{{ analytics.logins }}</h4>
-                                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">Logins</small>
-                                    </div>
-                                  </div>
-                                  <div class="col-6">
-                                    <div class="p-3 bg-light rounded border">
-                                        <h4 class="fw-bold text-primary mb-0">{{ analytics.contentViews }}</h4>
-                                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">Views</small>
-                                    </div>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <div class="col-lg-8">
-                              <div class="p-3 border rounded bg-white h-100">
-                                  <div class="d-flex justify-content-between align-items-end mb-2">
-                                      <small class="fw-bold text-muted">ACTIVITY TREND (LAST 7 DAYS)</small>
-                                  </div>
-                                  <div class="d-flex align-items-end justify-content-between" style="height: 120px;">
-                                      <div v-for="day in chartData" :key="day.date" class="d-flex flex-column align-items-center" style="width: 12%;">
-                                          <div class="bg-navy rounded-top w-100 position-relative chart-bar" :style="{ height: day.height, minHeight: '4px', opacity: day.count > 0 ? 1 : 0.2 }">
-                                              <div class="bar-tooltip">{{ day.count }}</div>
-                                          </div>
-                                          <small class="text-muted mt-2" style="font-size: 0.7rem;">{{ day.date }}</small>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                      
-                      <div class="table-responsive border rounded" style="max-height: 300px; overflow-y: auto;">
-                          <table class="table table-hover align-middle mb-0">
-                              <thead class="bg-light sticky-top">
-                                  <tr>
-                                      <th class="small text-muted text-uppercase ps-3">Time</th>
-                                      <th class="small text-muted text-uppercase">User</th>
-                                      <th class="small text-muted text-uppercase">Role</th>
-                                      <th class="small text-muted text-uppercase">Action</th>
-                                      <th class="small text-muted text-uppercase">Details</th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-                                  <tr v-if="isLoadingLogs">
-                                      <td colspan="5" class="text-center p-4 text-muted">
-                                          <span class="spinner-border spinner-border-sm text-navy" role="status"></span>
-                                          Connecting to live feed...
-                                      </td>
-                                  </tr>
-                                  <tr v-else-if="activityLogs.length === 0">
-                                      <td colspan="5" class="text-center p-4 text-muted">No activity recorded yet.</td>
-                                  </tr>
-                                  <tr v-for="log in activityLogs" :key="log.id">
-                                      <td class="small text-muted text-nowrap ps-3">{{ log.time }}</td>
-                                      <td>
-                                          <div class="d-flex align-items-center gap-2">
-                                              <div class="bg-light-navy text-navy rounded-circle d-flex align-items-center justify-content-center fw-bold small" style="width: 24px; height: 24px;">
-                                                  {{ log.userName ? log.userName.charAt(0) : '?' }}
-                                              </div>
-                                              <span class="small fw-bold">{{ log.userName || log.userEmail }}</span>
-                                          </div>
-                                      </td>
-                                      <td><span class="badge bg-light text-dark border" style="font-size: 0.7rem;">{{ log.userRole || 'User' }}</span></td>
-                                      <td><span class="badge bg-white text-dark border">{{ log.action }}</span></td>
-                                      <td class="small text-muted">{{ log.details }}</td>
-                                  </tr>
-                              </tbody>
-                          </table>
-                      </div>
-                  </div>
-              </div>
+      <div class="card border-0 shadow-sm p-4 bg-white mb-5 rounded-4">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+              <h5 class="fw-bold text-navy mb-0 d-flex align-items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="text-sky"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  Activity Intelligence
+              </h5>
+              <button @click="isLogsExpanded = !isLogsExpanded" class="btn btn-sm btn-light border fw-bold text-muted">
+                  {{ isLogsExpanded ? 'Collapse' : 'Expand' }}
+              </button>
           </div>
-
-          <div class="col-12">
-              <div class="card border-0 shadow-sm p-4 bg-white">
-                  <div class="row g-4">
-                      <div class="col-lg-4 border-end-lg">
-                          <h5 class="fw-bold text-navy mb-3">Upload Resource</h5>
-                          <div class="mb-3">
-                              <label class="small text-muted fw-bold mb-1">Select Document</label>
-                              <input type="file" class="form-control form-control-sm" @change="handleFileSelect" accept=".pdf,.docx,.xlsx,.pptx">
-                          </div>
-                          <div class="mb-3" v-if="selectedFile">
-                              <label class="small text-muted fw-bold mb-1">Display Title</label>
-                              <input type="text" class="form-control form-control-sm" v-model="newFileName">
-                          </div>
-                          <div v-if="isUploading" class="progress mb-3" style="height: 6px;">
-                              <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" :style="{ width: uploadProgress + '%' }"></div>
-                          </div>
-                          <button @click="handleUpload" class="btn btn-navy w-100 fw-bold btn-sm" :disabled="!selectedFile || isUploading">
-                              {{ isUploading ? 'Uploading...' : 'Publish to Portal' }}
-                          </button>
-                      </div>
-
-                      <div class="col-lg-8">
-                          <h6 class="fw-bold text-navy mb-3">Active Files (Live on Client Portal)</h6>
-                          <div class="list-group list-group-flush border rounded">
-                               <div v-if="store.content.resources && store.content.resources.length === 0" class="p-4 text-center text-muted small">
-                                  No files uploaded yet.
-                              </div>
-                              <div v-for="(file, index) in store.content.resources" :key="file.id" class="list-group-item d-flex justify-content-between align-items-center">
-                                  <div class="d-flex align-items-center gap-3">
-                                      <div class="badge bg-light text-dark border">{{ file.type }}</div>
-                                      <div>
-                                          <div class="fw-bold text-navy small">{{ file.title }}</div>
-                                          <small class="text-muted" style="font-size: 0.75rem">{{ file.fileName }} • {{ file.size }}</small>
-                                      </div>
-                                  </div>
-                                  <button @click="deleteResource(index)" class="btn btn-sm text-danger fw-bold hover-bg-light">
-                                      Delete
-                                  </button>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-
-          <div class="col-12">
-              <div class="card border-0 shadow-sm p-4">
-                  <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="fw-bold text-navy mb-0">Home Page Slider</h5>
-                    <button @click="addSlide" class="btn btn-sm btn-outline-primary">+ Add Slide</button>
-                  </div>
-                  
-                  <div class="table-responsive d-none d-md-block">
-                    <table class="table align-middle">
-                      <thead class="bg-light small text-uppercase">
-                        <tr>
-                          <th style="min-width: 60px">Img</th>
-                          <th>Image URL</th>
-                          <th>Title</th>
-                          <th>Subtitle</th>
-                          <th></th>
-                        </tr>
+          <div v-if="isLogsExpanded" class="fade-in">
+              <AdminAnalytics :logs="store.activityLogs" />
+              
+              <div class="table-responsive border rounded mt-4" style="max-height: 300px; overflow-y: auto;">
+                  <table class="table table-hover align-middle mb-0">
+                      <thead class="bg-light sticky-top">
+                          <tr><th class="ps-3">Time</th><th>User</th><th>Role</th><th>Action</th><th>Details</th></tr>
                       </thead>
                       <tbody>
-                        <tr v-for="(slide, index) in draftContent.heroSlides" :key="slide.id">
-                          <td><img :src="slide.image" class="rounded border" style="width: 50px; height: 30px; object-fit: cover;"></td>
-                          <td><input v-model="slide.image" type="text" class="form-control form-control-sm"></td>
-                          <td><input v-model="slide.title" type="text" class="form-control form-control-sm"></td>
-                          <td><input v-model="slide.subtitle" type="text" class="form-control form-control-sm"></td>
-                          <td><button @click="removeSlide(index)" class="btn btn-sm text-danger">×</button></td>
-                        </tr>
+                          <tr v-for="log in store.activityLogs" :key="log.id">
+                              <td class="small text-muted ps-3 text-nowrap">{{ log.time }}</td>
+                              <td class="fw-bold small">{{ log.userName }}</td>
+                              <td><span class="badge bg-light text-dark border">{{ log.userRole }}</span></td>
+                              <td><span class="badge bg-navy text-white">{{ log.action }}</span></td>
+                              <td class="small text-muted text-truncate" style="max-width: 200px;">{{ log.details }}</td>
+                          </tr>
                       </tbody>
-                    </table>
-                  </div>
-
-                  <div class="d-md-none d-flex flex-column gap-3">
-                      <div v-for="(slide, index) in draftContent.heroSlides" :key="slide.id" class="bg-light p-3 rounded border">
-                          <div class="d-flex justify-content-between mb-2">
-                              <span class="badge bg-secondary">Slide {{ index + 1 }}</span>
-                              <button @click="removeSlide(index)" class="btn btn-sm text-danger fw-bold">Delete</button>
-                          </div>
-                          <input v-model="slide.title" type="text" class="form-control form-control-sm mb-2" placeholder="Title">
-                          <input v-model="slide.subtitle" type="text" class="form-control form-control-sm mb-2" placeholder="Subtitle">
-                          <input v-model="slide.image" type="text" class="form-control form-control-sm" placeholder="Image URL">
-                      </div>
-                  </div>
-
+                  </table>
               </div>
           </div>
-
-          <div class="col-12">
-              <div class="card border-0 shadow-sm p-4">
-                  <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h5 class="fw-bold text-navy mb-0">Social Media Feeds</h5>
-                        <small class="text-muted d-none d-md-block">Content updates automatically save the time.</small>
-                    </div>
-                    <button @click="addSocialPost" class="btn btn-sm btn-outline-primary">+ Add Post</button>
-                  </div>
-
-                  <div class="table-responsive d-none d-md-block">
-                    <table class="table align-middle">
-                      <thead class="bg-light small text-uppercase">
-                        <tr>
-                          <th style="width: 150px">Platform</th>
-                          <th>Post Content</th>
-                          <th style="width: 200px">Link URL</th>
-                          <th style="width: 150px">Last Updated</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="(post, index) in draftContent.socialUpdates" :key="post.id">
-                          <td>
-                              <select v-model="post.platform" class="form-select form-select-sm" @change="updateTimestamp(post)">
-                                  <option value="LinkedIn">LinkedIn</option>
-                                  <option value="Twitter (X)">Twitter (X)</option>
-                                  <option value="Facebook">Facebook</option>
-                              </select>
-                          </td>
-                          <td><textarea v-model="post.text" @input="updateTimestamp(post)" class="form-control form-control-sm" rows="1"></textarea></td>
-                          <td><input v-model="post.link" type="text" class="form-control form-control-sm"></td>
-                          <td class="small text-muted">{{ formatLastUpdated(post.date) }}</td>
-                          <td><button @click="removeSocialPost(index)" class="btn btn-sm text-danger">×</button></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div class="d-md-none d-flex flex-column gap-3">
-                        <div v-for="(post, index) in draftContent.socialUpdates" :key="post.id" class="bg-light p-3 rounded border">
-                           <div class="d-flex justify-content-between mb-2 align-items-center">
-                              <select v-model="post.platform" class="form-select form-select-sm w-auto shadow-sm" @change="updateTimestamp(post)">
-                                  <option value="LinkedIn">LinkedIn</option>
-                                  <option value="Twitter (X)">Twitter (X)</option>
-                                  <option value="Facebook">Facebook</option>
-                              </select>
-                              <button @click="removeSocialPost(index)" class="btn btn-sm text-danger fw-bold">Delete</button>
-                           </div>
-                           <textarea v-model="post.text" @input="updateTimestamp(post)" class="form-control form-control-sm mb-2" rows="3" placeholder="Post Content"></textarea>
-                           <input v-model="post.link" type="text" class="form-control form-control-sm mb-2" placeholder="Link URL">
-                        </div>
-                  </div>
-              </div>
-          </div>
-
-          <div class="col-lg-6">
-              <div class="card border-0 shadow-sm p-4 h-100">
-                  <h5 class="fw-bold text-navy mb-4">About Us Section</h5>
-                  <div class="mb-3">
-                      <label class="form-label small fw-bold text-muted">TITLE</label>
-                      <input v-model="draftContent.about.title" type="text" class="form-control">
-                  </div>
-                  <div class="mb-3">
-                      <label class="form-label small fw-bold text-muted">BODY TEXT</label>
-                      <textarea v-model="draftContent.about.text" class="form-control" rows="6"></textarea>
-                  </div>
-              </div>
-          </div>
-
-          <div class="col-lg-6">
-              <div class="card border-0 shadow-sm overflow-hidden h-100 bg-dark">
-                  <div class="card-header bg-white border-bottom p-3">
-                      <strong class="text-navy small">LIVE SLIDER PREVIEW</strong>
-                  </div>
-                  <div class="position-relative h-100 preview-container">
-                      <Hero :previewData="draftContent.heroSlides" />
-                  </div>
-              </div>
-          </div>
-
       </div>
+
+      <hr class="my-5 text-muted opacity-25">
+
+      <AdminHeroEditor :slides="draftContent.heroSlides" />
+
+      <div class="row g-4 mb-5">
+          <div class="col-12">
+              <AdminAboutEditor :aboutData="draftContent.about" />
+          </div>
+          <div class="col-12">
+              <AdminSocialsEditor :socials="draftContent.socialUpdates" />
+          </div>
+      </div>
+
+      <AdminFileManager />
+
     </div>
+
+    <div v-if="showReportModal" class="modal-backdrop-custom d-flex align-items-center justify-content-center">
+        <div class="bg-white p-4 rounded-4 shadow-lg border" style="width: 400px; max-width: 90%;">
+            <h5 class="fw-bold text-navy mb-3">Export Activity Records</h5>
+            <div class="mb-3">
+                <label class="small text-muted fw-bold mb-1">Report Type</label>
+                <select v-model="reportType" class="form-select">
+                    <option value="daily">Daily Report</option>
+                    <option value="weekly">Weekly Report</option>
+                    <option value="monthly">Monthly Report</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="small text-muted fw-bold mb-1">Select Period</label>
+                <input v-if="reportType === 'daily' || reportType === 'weekly'" type="date" v-model="reportDate" class="form-control">
+                <input v-else type="month" v-model="reportDate" class="form-control">
+            </div>
+            <div class="d-flex gap-2">
+                <button @click="closeReportModal" class="btn btn-light border w-50">Cancel</button>
+                <button @click="generateReport" class="btn btn-navy w-50">Download CSV</button>
+            </div>
+        </div>
+    </div>
+
   </main>
 </template>
 
 <style scoped>
 .text-navy { color: #1a2b49; }
-.bg-light-navy { background-color: #f0f4f8; }
-.border-navy { border-color: #1a2b49 !important; }
-.btn-navy { background-color: #1a2b49; color: white; }
-.preview-container { min-height: 300px; height: 100%; }
+.bg-navy { background-color: #1a2b49 !important; }
+.btn-navy { background-color: #1a2b49; color: white; border: none; }
+.btn-navy:hover { background-color: #0f1a2e; transform: translateY(-1px); }
+.btn-white { background-color: white; color: #555; }
+.btn-white:hover { background-color: #f8f9fa; color: #1a2b49; }
+.text-sky { color: #0ea5e9; }
 .ls-2 { letter-spacing: 2px; }
-.fade-in { animation: fadeIn 0.3s ease-in-out; }
-
-/* CHART STYLES */
-.chart-bar {
-    transition: height 0.5s ease;
+.fade-in { animation: fadeIn 0.4s ease-out; }
+.modal-backdrop-custom {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(26, 43, 73, 0.4); backdrop-filter: blur(4px); z-index: 1050;
 }
-.chart-bar:hover .bar-tooltip {
-    opacity: 1;
-    top: -25px;
-}
-.bar-tooltip {
-    position: absolute;
-    top: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1a2b49;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: bold;
-    opacity: 0;
-    transition: all 0.2s;
-    pointer-events: none;
-}
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-@media (min-width: 992px) {
-    .border-end-lg { border-right: 1px solid #dee2e6; }
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
