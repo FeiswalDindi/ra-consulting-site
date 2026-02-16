@@ -215,10 +215,10 @@ const toggleMode = () => {
 
 /* Signup Button Variant */
 .btn-signup {
-    background: #0ea5e9; /* Sky Blue */
+    background: #bea429; /* gold */
     color: white;
 }
-.btn-signup:hover { background: #0284c7; }
+.btn-signup:hover { background: #bea429; }
 
 .social-btn {
   width: 100%; background: white; border: none; padding: 10px;

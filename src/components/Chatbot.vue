@@ -192,8 +192,8 @@ const sendMessage = async () => {
 
 <style scoped>
 .bg-navy { background-color: #1a2b49; }
-.text-sky { color: #0ea5e9; }
-.bg-sky { background-color: #0ea5e9; }
+.text-sky { color: #bea429}
+.bg-sky { background-color: #bea429 }
 .btn-navy { background-color: #1a2b49; color: white; border: none; }
 .chatbot-wrapper { position: fixed; bottom: 30px; right: 30px; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end; }
 .chat-window { width: 340px; height: 450px; background: white; border-radius: 16px; overflow: hidden; margin-bottom: 20px; display: flex; flex-direction: column; border: 1px solid rgba(0,0,0,0.1); }
@@ -201,14 +201,14 @@ const sendMessage = async () => {
 .message-bubble { max-width: 85%; line-height: 1.5; word-wrap: break-word; }
 .rounded-bot { border-radius: 12px 12px 12px 2px; }
 .rounded-user { border-radius: 12px 12px 2px 12px; }
-.border-start-sky { border-left: 3px solid #0ea5e9 !important; }
+.border-start-sky { border-left: 3px solid #bea429!important; }
 .bot-avatar { width: 35px; height: 35px; font-size: 0.8rem; }
 .status-dot { width: 8px; height: 8px; background-color: #2ecc71; border-radius: 50%; display: inline-block; }
 .chat-toggle { height: 60px; min-width: 60px; border: 2px solid white; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .chat-toggle.expanded { width: auto; padding-left: 15px; padding-right: 15px; }
 
 /* Typing Animation Dots */
-.typing-dot { width: 6px; height: 6px; background: #0ea5e9; border-radius: 50%; animation: blink 1.4s infinite both; }
+.typing-dot { width: 6px; height: 6px; background: #bea429; border-radius: 50%; animation: blink 1.4s infinite both; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%, 80%, 100% { opacity: 0; } 40% { opacity: 1; } }

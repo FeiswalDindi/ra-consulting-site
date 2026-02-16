@@ -53,7 +53,7 @@ const confirmLogout = () => {
   background: rgba(26, 43, 73, 0.85); border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px; padding: 40px; width: 90%; max-width: 400px;
 }
-.text-gold { color: #c5a059; }
+.text-gold { color: #D4AF37; }
 .btn-cancel {
     background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
     color: white; padding: 12px; border-radius: 12px; font-weight: bold;

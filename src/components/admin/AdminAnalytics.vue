@@ -1,10 +1,8 @@
 <script setup>
 import { computed, defineProps } from 'vue';
 
-// 1. Accept Data from Parent
 const props = defineProps(['logs']);
 
-// 2. Stats Logic
 const analytics = computed(() => {
     const data = props.logs || [];
     return {
@@ -14,35 +12,37 @@ const analytics = computed(() => {
     };
 });
 
-// 3. Chart Logic (Simplified & Robust)
 const chartData = computed(() => {
     const daysMap = {};
     const today = new Date();
     
-    // A. Create 7 Empty Buckets
-    // We use .toDateString() (e.g. "Fri Feb 06 2026") as the unique key.
-    // This is timezone-safe and bulletproof.
+    const getLocalKey = (d) => {
+        return d.getFullYear() + '-' + 
+               String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+               String(d.getDate()).padStart(2, '0');
+    };
+
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(today.getDate() - i);
-        const key = d.toDateString(); 
-        
+        const key = getLocalKey(d);
         daysMap[key] = {
-            label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), // "Feb 6"
+            date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             count: 0
         };
     }
 
-    // B. Fill Buckets
     if (props.logs) {
         props.logs.forEach(log => {
-            // We TRUST the store's rawDate. 
-            // We create a new Date object to ensure it's a valid instance.
-            if (log.rawDate) {
-                const logDate = new Date(log.rawDate);
-                const key = logDate.toDateString();
+            let logDate = null;
+            if (log.timestamp && log.timestamp.seconds) {
+                logDate = new Date(log.timestamp.seconds * 1000);
+            } else if (log.rawDate) {
+                logDate = new Date(log.rawDate);
+            }
 
-                // If this date key exists in our 7-day map, count it.
+            if (logDate) {
+                const key = getLocalKey(logDate);
                 if (daysMap[key]) {
                     daysMap[key].count++;
                 }
@@ -50,25 +50,13 @@ const chartData = computed(() => {
         });
     }
 
-    // C. Format for UI
-    // We rebuild the array based on the 7-day loop to ensure chronological order
-    const result = [];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(today.getDate() - i);
-        const key = d.toDateString();
-        if (daysMap[key]) {
-            result.push(daysMap[key]);
-        }
-    }
+    const sortedKeys = Object.keys(daysMap).sort();
+    const maxVal = Math.max(...sortedKeys.map(k => daysMap[k].count), 1); 
 
-    // Calculate Bar Heights
-    const maxVal = Math.max(...result.map(d => d.count), 1);
-    
-    return result.map(item => ({ 
-        date: item.label, 
-        count: item.count, 
-        height: (item.count / maxVal) * 100 + '%' 
+    return sortedKeys.map(key => ({ 
+        date: daysMap[key].date, 
+        count: daysMap[key].count, 
+        height: (daysMap[key].count / maxVal) * 100 + '%' 
     }));
 });
 </script>
@@ -94,7 +82,7 @@ const chartData = computed(() => {
         </div>
         <div class="col-6">
             <div class="p-3 bg-light rounded border h-100">
-              <h4 class="fw-bold text-sky mb-0">{{ analytics.views }}</h4>
+              <h4 class="fw-bold text-gold mb-0">{{ analytics.views }}</h4>
               <small class="text-muted small">Views</small>
             </div>
         </div>
@@ -113,9 +101,11 @@ const chartData = computed(() => {
         
         <div class="d-flex align-items-end justify-content-between flex-grow-1" style="min-height: 150px;">
           <div v-for="day in chartData" :key="day.date" class="d-flex flex-column align-items-center" style="width: 12%;">
+            
             <div class="bg-navy rounded-top w-100 position-relative chart-bar" :style="{ height: day.height, minHeight: '4px' }">
                 <div class="bar-tooltip">{{ day.count }} Events</div>
             </div>
+            
             <small class="text-muted mt-2 fw-bold" style="font-size: 0.65rem;">{{ day.date }}</small>
           </div>
         </div>
@@ -125,26 +115,29 @@ const chartData = computed(() => {
 </template>
 
 <style scoped>
-.text-navy { color: #1a2b49; }
-.bg-navy { background-color: #1a2b49; }
-.text-sky { color: #0ea5e9; }
-.bg-light-navy { background-color: #f0f4f8; }
-.border-navy { border-color: #1a2b49 !important; }
+/* STRICT HEX CODES APPLIED */
+.text-navy { color: #1b2c57; }
+.bg-navy { background-color: #1b2c57; }
+.text-gold { color: #bea429; }
+.border-navy { border-color: #1b2c57 !important; }
+
+.bg-light-navy { background-color: #f4f6fa; }
 .ls-2 { letter-spacing: 2px; }
 .opacity-10 { opacity: 0.1; }
 
-.status-dot { width: 6px; height: 6px; background-color: #2ecc71; border-radius: 50%; animation: blink 2s infinite; }
+.status-dot { width: 6px; height: 6px; background-color: #bea429; border-radius: 50%; animation: blink 2s infinite; }
 @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-.chart-bar { transition: height 0.6s ease; cursor: pointer; opacity: 0.9; }
-.chart-bar:hover { background-color: #0ea5e9; opacity: 1; transform: scaleY(1.05); transform-origin: bottom; }
+.chart-bar { transition: height 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; opacity: 0.8; }
+/* Changed hover from sky blue to gold */
+.chart-bar:hover { background-color: #bea429; opacity: 1; transform: scaleY(1.05); transform-origin: bottom; }
 
 .bar-tooltip { 
     position: absolute; 
     top: -30px; 
     left: 50%; 
     transform: translateX(-50%); 
-    background: #1a2b49; 
+    background: #1b2c57; 
     color: white; 
     padding: 4px 8px; 
     border-radius: 4px; 

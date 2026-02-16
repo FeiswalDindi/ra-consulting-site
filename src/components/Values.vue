@@ -67,8 +67,8 @@ const values = ref([
 /* COLORS */
 .text-navy { color: #1a2b49; }
 .bg-navy { background-color: #1a2b49; }
-.text-sky { color: #0ea5e9 !important; } /* Sky Blue Accent */
-.bg-sky { background-color: #0ea5e9; }
+.text-gold { color: #bea429 !important; } /* Sky Blue Accent */
+.bg-sky { background-color: #bea429; }
 
 /* LAYOUT */
 .divider { width: 60px; height: 3px; }
@@ -84,7 +84,7 @@ const values = ref([
   transform: translateY(-8px);
   background: white !important;
   box-shadow: 0 10px 30px rgba(14, 165, 233, 0.15) !important; /* Sky blue shadow */
-  border-bottom: 4px solid #0ea5e9 !important; /* Sky blue highlight */
+  border-bottom: 4px solid #bea429 !important; /* Sky blue highlight */
 }
 
 .icon-box {
@@ -98,7 +98,7 @@ const values = ref([
 
 /* Hover: Icon turns Sky Blue */
 .value-card:hover .icon-box {
-    background-color: #0ea5e9 !important;
+    background-color: #bea429 !important;
     transform: scale(1.1);
 }
 </style>

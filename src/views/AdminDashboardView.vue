@@ -3,7 +3,6 @@ import { ref, watch, onMounted } from 'vue';
 import { store } from '../store';
 import { useRouter } from 'vue-router';
 
-// IMPORT SUB-COMPONENTS
 import AdminAnalytics from '../components/admin/AdminAnalytics.vue';
 import AdminHeroEditor from '../components/admin/AdminHeroEditor.vue';
 import AdminAboutEditor from '../components/admin/AdminAboutEditor.vue';
@@ -13,16 +12,13 @@ import AdminFileManager from '../components/admin/AdminFileManager.vue';
 const router = useRouter();
 if (!store.isAdmin) router.push('/');
 
-// --- DRAFT STATE ---
 const draftContent = ref(JSON.parse(JSON.stringify(store.content)));
 const isLogsExpanded = ref(true);
 
-// --- REPORTING STATE ---
 const showReportModal = ref(false);
 const reportType = ref('daily');
 const reportDate = ref(new Date().toISOString().slice(0, 10));
 
-// Sync Data Logic (Ensures editors aren't empty)
 watch(() => store.content, (newVal) => {
     if (newVal) {
         const currentDraft = JSON.stringify(draftContent.value);
@@ -30,14 +26,12 @@ watch(() => store.content, (newVal) => {
         if (currentDraft.length < 200 && currentStore.length > 200) {
             draftContent.value = JSON.parse(currentStore);
         }
-        // Safety defaults
         if (!draftContent.value.heroSlides) draftContent.value.heroSlides = [];
         if (!draftContent.value.socialUpdates) draftContent.value.socialUpdates = [];
         if (!draftContent.value.about) draftContent.value.about = { title: '', text: '' };
     }
 }, { deep: true, immediate: true });
 
-// --- ACTIONS ---
 const publishChanges = () => {
     store.content = JSON.parse(JSON.stringify(draftContent.value));
     store.saveContent();
@@ -51,17 +45,14 @@ const discardChanges = () => {
 
 const goToFirestore = () => window.open('https://console.firebase.google.com/', '_blank');
 
-// --- REPORTING LOGIC ---
 const openReportModal = () => { showReportModal.value = true; };
 const closeReportModal = () => { showReportModal.value = false; };
 
 const generateReport = () => {
-    // 1. Filter Logs
     const selected = new Date(reportDate.value);
     let filteredLogs = [];
     let filename = "Report.csv";
 
-    // Helper: Safely get date object from log
     const getLogDate = (log) => {
         if (log.timestamp && log.timestamp.seconds) return new Date(log.timestamp.seconds * 1000);
         if (log.rawDate) return new Date(log.rawDate);
@@ -97,14 +88,12 @@ const generateReport = () => {
         return;
     }
 
-    // 2. Create CSV
     const headers = ["Time", "User", "Role", "Action", "Details"];
     const rows = filteredLogs.map(log => [
         `"${log.time}"`, `"${log.userName}"`, `"${log.userRole}"`, `"${log.action}"`, `"${log.details.replace(/"/g, '""')}"`
     ]);
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
     
-    // 3. Trigger Download
     const link = document.createElement("a");
     link.href = encodeURI(csvContent);
     link.download = filename;
@@ -121,7 +110,7 @@ const generateReport = () => {
       
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-5 border-bottom pb-4 gap-3">
           <div class="text-center text-md-start">
-              <h6 class="text-sky fw-bold ls-2 small text-uppercase mb-1">Management Console</h6>
+              <h6 class="text-gold fw-bold ls-2 small text-uppercase mb-1">Management Console</h6>
               <h1 class="display-6 fw-bold text-navy">RA Dashboard</h1>
           </div>
           <div class="d-flex flex-wrap gap-2 justify-content-center">
@@ -142,7 +131,7 @@ const generateReport = () => {
       <div class="card border-0 shadow-sm p-4 bg-white mb-5 rounded-4">
           <div class="d-flex justify-content-between align-items-center mb-4">
               <h5 class="fw-bold text-navy mb-0 d-flex align-items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="text-sky"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="text-gold"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                   Activity Intelligence
               </h5>
               <button @click="isLogsExpanded = !isLogsExpanded" class="btn btn-sm btn-light border fw-bold text-muted">
@@ -215,18 +204,22 @@ const generateReport = () => {
 </template>
 
 <style scoped>
-.text-navy { color: #1a2b49; }
-.bg-navy { background-color: #1a2b49 !important; }
-.btn-navy { background-color: #1a2b49; color: white; border: none; }
-.btn-navy:hover { background-color: #0f1a2e; transform: translateY(-1px); }
+/* STRICT HEX CODES APPLIED */
+.text-navy { color: #1b2c57; }
+.bg-navy { background-color: #1b2c57 !important; }
+.btn-navy { background-color: #1b2c57; color: white; border: none; }
+.btn-navy:hover { background-color: #121e3a; transform: translateY(-1px); } /* Darker blue hover */
+
+.text-gold { color: #bea429; } /* Replaced text-sky */
+
 .btn-white { background-color: white; color: #555; }
-.btn-white:hover { background-color: #f8f9fa; color: #1a2b49; }
-.text-sky { color: #0ea5e9; }
+.btn-white:hover { background-color: #f8f9fa; color: #1b2c57; }
+
 .ls-2 { letter-spacing: 2px; }
 .fade-in { animation: fadeIn 0.4s ease-out; }
 .modal-backdrop-custom {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(26, 43, 73, 0.4); backdrop-filter: blur(4px); z-index: 1050;
+    background: rgba(27, 44, 87, 0.4); backdrop-filter: blur(4px); z-index: 1050;
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>

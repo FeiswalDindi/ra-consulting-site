@@ -8,9 +8,9 @@
       
       <div class="row justify-content-center text-center mb-5" v-scroll-reveal>
         <div class="col-lg-8">
-          <h6 class="text-uppercase text-sky ls-2 fw-bold mb-2">Industries We Serve</h6>
+          <h6 class="text-uppercase text-gold ls-2 fw-bold mb-2">Industries We Serve</h6>
           <h2 class="display-5 fw-bold text-navy">Specialized Expertise</h2>
-          <div class="divider mx-auto mt-4 bg-sky"></div>
+          <div class="divider mx-auto mt-4 bg-gold fade-gradient"></div>
         </div>
       </div>
 
@@ -73,51 +73,45 @@
 </template>
 
 <style scoped>
-/* 1. PROFESSIONAL BACKGROUND: A crisp, business "Alice Blue" */
-.section-professional {
-    background-color: #F4F7FB; 
-    border-top: 1px solid #e9ecef;
-}
+.section-professional { background-color: #Fcfcfc; border-top: 1px solid #e9ecef; }
 
-/* 2. COLORS: THEME UPDATE */
+/* THEME COLORS */
 .text-navy { color: #1a2b49; }
 .bg-navy { background-color: #1a2b49; }
+.text-gold { color: #D4AF37 !important; }
+.bg-gold { background-color: #D4AF37; }
 
-/* REPLACED GOLD WITH SKY BLUE */
-.text-sky { color: #0ea5e9 !important; }
-.bg-sky { background-color: #0ea5e9; }
-
+/* Gradient Divider */
 .divider { width: 80px; height: 4px; border-radius: 2px; }
+.fade-gradient { background: linear-gradient(90deg, #D4AF37, transparent); }
 
-/* 3. CARD STYLING - Clean and Sharp */
 .industry-card {
     transition: all 0.3s ease;
     border: 1px solid rgba(0,0,0,0.03);
     box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-    border-bottom: 4px solid transparent; /* Ready for hover */
+    border-bottom: 4px solid transparent; 
 }
 
-/* Hover Logic: Sky Blue Glow + Border */
+/* Hover Logic: Gold Glow + Border */
 .industry-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 15px 30px rgba(14, 165, 233, 0.15) !important;
-    border-bottom: 4px solid #0ea5e9;
+    box-shadow: 0 15px 30px rgba(212, 175, 55, 0.15) !important;
+    border-bottom: 4px solid #D4AF37;
 }
 
-/* 4. ICON CIRCLE - High Contrast (Navy Circle, White Icon) */
 .icon-box {
     width: 70px; height: 70px;
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    border: 4px solid #fff; /* White ring effect */
+    border: 4px solid #fff; 
     box-shadow: 0 5px 15px rgba(26, 43, 73, 0.15);
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
 }
 
-/* Icon turns Sky Blue on Card Hover */
+/* Icon turns Gold on Card Hover */
 .industry-card:hover .icon-box {
-    background-color: #0ea5e9 !important;
-    transform: scale(1.1);
+    background-color: #D4AF37 !important;
+    transform: scale(1.1) rotate(5deg);
 }
 
 .ls-2 { letter-spacing: 2px; font-size: 0.8rem; }

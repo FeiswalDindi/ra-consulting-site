@@ -94,8 +94,8 @@ const getPlatformConfig = (platformName) => {
 
 <style scoped>
 .text-navy { color: #1a2b49; }
-.text-gold { color: #c5a059; }
-.bg-gold { background-color: #c5a059; }
+.text-gold { color: #D4AF37; }
+.bg-gold { background-color: #D4AF37; }
 .ls-2 { letter-spacing: 2px; font-size: 0.8rem; }
 .divider { width: 60px; height: 3px; border-radius: 2px; }
 .social-card { transition: transform 0.3s ease; background: #f8f9fa; }

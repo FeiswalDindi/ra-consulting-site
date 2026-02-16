@@ -121,7 +121,7 @@ const handleUnlock = () => {
     position: relative; z-index: 2; min-width: 200px; font-weight: 600; color: #1a2b49;
 }
 .board-card { border-top: 4px solid #1a2b49; text-transform: uppercase; }
-.ceo-card { border-left: 4px solid #0d6efd; }
+.ceo-card { border-left: 4px solid #bea429; }
 .director-card { background: #1a2b49; color: white; min-width: 240px; }
 .sub-card { font-size: 0.9rem; padding: 10px 15px; min-width: 100%; border: 1px solid #dee2e6; border-left: 3px solid #1a2b49; }
 

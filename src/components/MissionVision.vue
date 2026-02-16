@@ -97,7 +97,7 @@ const handleReadStory = () => {
 .ls-2 { letter-spacing: 2px; font-size: 0.8rem; }
 .text-primary { color: #1a2b49 !important; }
 .btn-primary { background-color: #1a2b49; border: none; transition: transform 0.2s; }
-.btn-primary:hover { background-color: #0d6efd; transform: translateY(-2px); }
+.btn-primary:hover { background-color: #bea429; transform: translateY(-2px); }
 
 /* --- CONTENT LOCKER STYLES --- */
 .content-locker {
@@ -137,13 +137,13 @@ const handleReadStory = () => {
 
 .mission-card {
     background: #1a2b49;
-    border-left: 5px solid #0d6efd;
+    border-left: 5px solid #bea429;
 }
 
 .vision-card {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
-    border-left: 5px solid #1a2b49;
+    border-left: 5px solid #1b2c57;
 }
 
 .icon-wrapper {
