@@ -2,10 +2,9 @@
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
 
 // --- CONFIGURATION ---
-const API_KEY = 'AIzaSyB8v0M21HyVYCkUMTQ_1yRLfkIWfj7oVIM';
+const API_KEY = 'AIzaSyD3cWbia5KjKkv9bXcLp3Aa2apeFwCQH2M';
 const STORAGE_KEY = 'ra_chat_history';
 
-// Updated to reflect all the new knowledge we've implemented
 const SYSTEM_PROMPT = `
 You are the "RA Smart Assistant", a professional AI consultant for 'RA Strategic & Analytics Consulting Ltd', based in Nairobi, Kenya.
 Your tone is: Professional, insightful, concise, and helpful.
@@ -26,15 +25,18 @@ const isStreaming = ref(false);
 const userMessage = ref('');
 const messagesContainer = ref(null);
 
+// Unbreakable ID Generator
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+
 const defaultGreeting = { 
-    id: 1, 
+    id: generateId(), 
     sender: 'bot', 
     text: 'Hello! I am the RA Smart Assistant. I can help you explore our services, case studies, or find the right strategy for your institution. How can I help you today?' 
 };
 
 const messages = ref([]);
 
-// --- INIT & LOCAL STORAGE (Chat Retention) ---
+// --- INIT & LOCAL STORAGE ---
 onMounted(() => {
     window.addEventListener('scroll', handleScroll);
     const savedChat = localStorage.getItem(STORAGE_KEY);
@@ -53,11 +55,10 @@ watch(messages, (newVal) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newVal));
 }, { deep: true });
 
-
 // --- ACTIONS ---
 const clearChat = () => {
     if (confirm("Are you sure you want to clear this conversation?")) {
-        messages.value = [ { ...defaultGreeting } ];
+        messages.value = [ { ...defaultGreeting, id: generateId() } ];
         localStorage.removeItem(STORAGE_KEY);
     }
 };
@@ -80,29 +81,19 @@ const scrollToBottom = () => {
 
 const handleScroll = () => { isExpanded.value = window.scrollY < 100; };
 
-const getValidModel = async () => {
-    try {
-        const listResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`);
-        const listData = await listResponse.json();
-        const validModel = listData.models?.find(m => m.supportedGenerationMethods?.includes('generateContent') && m.name.includes('gemini-1.5-flash'));
-        return validModel ? validModel.name : 'models/gemini-1.5-flash'; 
-    } catch (e) { return 'models/gemini-1.5-flash'; }
-};
-
-// Formats chat history so Gemini remembers context without breaking rules
 const buildPromptHistory = () => {
     let history = [
         { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
         { role: 'model', parts: [{ text: "Understood. I will assist clients accordingly." }] }
     ];
 
-    const chatMessages = messages.value.filter(m => m.id !== 1 && m.sender !== 'error');
+    const chatMessages = messages.value.filter(m => m.sender !== 'error' && m.text.trim() !== '');
     
     chatMessages.forEach((msg) => {
         const role = msg.sender === 'user' ? 'user' : 'model';
         const lastHistory = history[history.length - 1];
         
-        // Gemini API requires alternating roles. If same role repeats, merge texts.
+        // Prevents API crash from consecutive identical roles
         if (lastHistory.role === role) {
             lastHistory.parts[0].text += `\n\n${msg.text}`;
         } else {
@@ -113,24 +104,58 @@ const buildPromptHistory = () => {
     return history;
 };
 
-// --- REAL-TIME AI STREAMING ---
+// --- CUSTOM SMOOTH TYPING ENGINE ---
+let typingQueue = [];
+let isFlushingQueue = false;
+
+const queueTextForTyping = (msgId, text) => {
+    // Break incoming text into characters and push to queue
+    const chars = text.split('');
+    typingQueue.push(...chars);
+    processTypingQueue(msgId);
+};
+
+const processTypingQueue = async (botMsgId) => {
+    if (isFlushingQueue) return;
+    isFlushingQueue = true;
+
+    const msg = messages.value.find(m => m.id === botMsgId);
+    if (!msg) { isFlushingQueue = false; return; }
+
+    while (typingQueue.length > 0) {
+        // Once words start appearing, kill the 3 typing dots
+        if (isTyping.value) isTyping.value = false;
+
+        const char = typingQueue.shift();
+        msg.text += char;
+        scrollToBottom();
+
+        // Delay between keystrokes for smooth visual effect
+        await new Promise(r => setTimeout(r, 15)); 
+    }
+
+    isFlushingQueue = false;
+};
+
+// --- SEND LOGIC ---
 const sendMessage = async () => {
     if (!userMessage.value.trim() || isStreaming.value) return;
     
     const input = userMessage.value;
-    messages.value.push({ id: Date.now(), sender: 'user', text: input });
+    messages.value.push({ id: generateId(), sender: 'user', text: input });
     userMessage.value = '';
     scrollToBottom();
     
     isTyping.value = true; // Show thinking dots
-    isStreaming.value = true;
+    isStreaming.value = true; // Lock input
+    
+    const botMsgId = generateId();
+    // Create the empty white bubble immediately
+    messages.value.push({ id: botMsgId, sender: 'bot', text: '' });
 
     try {
-        const modelName = await getValidModel();
-        
-        // Notice the 'alt=sse' - this enables the streaming chunks!
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/${modelName}:streamGenerateContent?alt=sse&key=${API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${API_KEY}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -138,21 +163,23 @@ const sendMessage = async () => {
             }
         );
 
+        if (!response.ok) {
+            throw new Error(`API Connection Failed: ${response.status}`);
+        }
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
         let done = false;
-        let firstChunkReceived = false;
-
-        const botMsgId = Date.now();
-        messages.value.push({ id: botMsgId, sender: 'bot', text: '' });
+        let buffer = '';
 
         while (!done) {
             const { value, done: readerDone } = await reader.read();
             done = readerDone;
             
             if (value) {
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep incomplete lines in buffer
                 
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
@@ -162,28 +189,30 @@ const sendMessage = async () => {
                         try {
                             const data = JSON.parse(dataStr);
                             const textChunk = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                            
-                            if (textChunk && !firstChunkReceived) {
-                                isTyping.value = false; // Hide 3 dots as soon as words start flowing
-                                firstChunkReceived = true;
+                            if (textChunk) {
+                                // Feed the text chunk to our smooth typer
+                                queueTextForTyping(botMsgId, textChunk);
                             }
-
-                            const msgIndex = messages.value.findIndex(m => m.id === botMsgId);
-                            if(msgIndex !== -1) {
-                                messages.value[msgIndex].text += textChunk;
-                            }
-                            scrollToBottom();
-                        } catch (e) { /* ignore partial chunk parsing errors */ }
+                        } catch (e) { /* ignore JSON parse errors on partial chunks */ }
                     }
                 }
             }
         }
     } catch (error) {
-        isTyping.value = false;
-        messages.value.push({ id: Date.now(), sender: 'error', text: "Connection issues. Please try again." });
+        console.warn("API Error caught, switching to simulated fallback.");
+        const fallbackText = "I'm currently experiencing connection issues. Please reach out to our team directly via WhatsApp or the Contact page for immediate assistance.";
+        // Even if it fails, simulate the typing so it looks natural!
+        queueTextForTyping(botMsgId, fallbackText);
     } finally {
-        isStreaming.value = false;
-        scrollToBottom();
+        // Only unlock the UI after the visual typing is completely finished
+        const checkQueueInterval = setInterval(() => {
+            if (typingQueue.length === 0 && !isFlushingQueue) {
+                clearInterval(checkQueueInterval);
+                isStreaming.value = false;
+                isTyping.value = false;
+                scrollToBottom();
+            }
+        }, 100);
     }
 };
 </script>
@@ -222,12 +251,13 @@ const sendMessage = async () => {
 
             <div class="chat-body p-3 bg-light" ref="messagesContainer">
                 <div v-for="msg in messages" :key="msg.id" class="d-flex mb-3" :class="msg.sender === 'user' ? 'justify-content-end' : 'justify-content-start'">
-                    <div 
-                        class="message-bubble p-3 shadow-sm" 
-                        :class="msg.sender === 'user' ? 'bg-navy text-white rounded-user' : 'bg-white text-dark rounded-bot border-start-gold'"
-                        v-html="parseMessage(msg.text)"
-                    ></div>
+                    
+                    <div v-if="msg.sender === 'user'" class="message-bubble p-3 shadow-sm bg-navy text-white rounded-user" v-html="parseMessage(msg.text)"></div>
+                    
+                    <div v-if="msg.sender === 'bot'" class="message-bubble p-3 shadow-sm bg-white text-dark rounded-bot border-start-gold" v-html="parseMessage(msg.text)"></div>
+                    
                 </div>
+                
                 <div v-if="isTyping" class="d-flex align-items-center gap-2 ms-2 mb-3">
                     <div class="typing-dot"></div>
                     <div class="typing-dot"></div>
@@ -267,7 +297,7 @@ const sendMessage = async () => {
 </template>
 
 <style scoped>
-/* REFINED NAVY & WHITE CORPORATE LOOK */
+/* STRICT COLORS */
 .bg-navy { background-color: #1b2c57 !important; }
 .text-navy { color: #1b2c57 !important; }
 
@@ -277,33 +307,38 @@ const sendMessage = async () => {
 .hover-white { transition: color 0.2s; }
 .hover-white:hover { color: white !important; }
 
+/* CHAT WINDOW */
 .chatbot-wrapper { position: fixed; bottom: 30px; right: 30px; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end; }
 .chat-window { width: 360px; height: 500px; background: white; border-radius: 16px; overflow: hidden; margin-bottom: 20px; display: flex; flex-direction: column; border: 1px solid rgba(0,0,0,0.1); }
 .chat-body { flex: 1; overflow-y: auto; font-size: 0.9rem; scroll-behavior: smooth; }
+
+/* BUBBLES */
 .message-bubble { max-width: 85%; line-height: 1.5; word-wrap: break-word; }
 .rounded-bot { border-radius: 12px 12px 12px 2px; }
 .rounded-user { border-radius: 12px 12px 2px 12px; }
-
-/* Subtle Gold Accent for Bot Messages */
 .border-start-gold { border-left: 3px solid #bea429 !important; }
 
+/* ICONS & DOTS */
 .bot-avatar { width: 35px; height: 35px; font-size: 0.8rem; }
 .status-dot { width: 8px; height: 8px; background-color: #2ecc71; border-radius: 50%; display: inline-block; }
 .chat-toggle { height: 60px; min-width: 60px; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .chat-toggle.expanded { width: auto; padding-left: 15px; padding-right: 15px; }
 
+/* FORM */
 .send-btn { width: 38px; height: 38px; }
 .form-control:focus { box-shadow: none; border-color: #1b2c57; background-color: white !important; }
 
-/* Typing Animation Dots (Gold Accent) */
+/* TYPING ANIMATION DOTS */
 .typing-dot { width: 6px; height: 6px; background: #bea429; border-radius: 50%; animation: blink 1.4s infinite both; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%, 80%, 100% { opacity: 0; } 40% { opacity: 1; } }
 
+/* TRANSITIONS */
 .slide-up-enter-active, .slide-up-leave-active { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .slide-up-enter-from, .slide-up-leave-to { opacity: 0; transform: translateY(30px); }
 
+/* SCROLLBAR */
 .chat-body::-webkit-scrollbar { width: 6px; }
 .chat-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 </style>
