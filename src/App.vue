@@ -7,6 +7,7 @@ import Chatbot from './components/Chatbot.vue';
 import CookieBanner from './components/CookieBanner.vue';
 import GoogleOneTap from './components/GoogleOneTap.vue';
 import LogoutModal from './components/LogoutModal.vue';
+import FloatingWhatsApp from './components/FloatingWhatsApp.vue';
 </script>
 
 <template>
@@ -26,7 +27,7 @@ import LogoutModal from './components/LogoutModal.vue';
     <CookieBanner />
     <GoogleOneTap />
     
-    <Chatbot /> 
+    <Chatbot /> <FloatingWhatsApp />
     
   </div>
 </template>

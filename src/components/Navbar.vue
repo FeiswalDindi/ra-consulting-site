@@ -5,7 +5,8 @@ import { auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'vue-router'; 
 
-import logoImg from '../assets/logo.png'; 
+import logoImg from '../assets/about.png'; 
+import MegaMenu from './MegaMenu.vue'; // <-- IMPORTING THE NEW COMPONENT!
 
 const router = useRouter();
 const isScrolled = ref(false);
@@ -14,6 +15,11 @@ const navbarRef = ref(null);
 
 const userData = computed(() => store.user);
 const isLoggedIn = computed(() => !!store.user);
+
+const userAvatar = computed(() => {
+    if (!userData.value) return null;
+    return userData.value.avatar || userData.value.photoURL || null;
+});
 
 const userInitial = computed(() => {
     if (userData.value?.email) return userData.value.email.charAt(0).toUpperCase();
@@ -82,28 +88,8 @@ onUnmounted(() => {
               </svg>
             </router-link>
             
-            <div class="dropdown-menu mega-menu w-100 shadow-lg border-0 mt-0 bg-white">
-               <div class="container py-4">
-                  <div class="row">
-                     <div class="col-md-6 mb-3 mb-md-0">
-                        <h6 class="text-gold fw-bold text-uppercase border-bottom border-gold pb-2 mb-3">About Us</h6>
-                        <ul class="list-unstyled">
-                           <li><router-link class="mega-link" to="/about" @click="closeMenu">Who We Are</router-link></li>
-                           <li><router-link class="mega-link" to="/" @click="closeMenu">Our Mission & Vision</router-link></li>
-                        </ul>
-                     </div>
-                     <div class="col-md-6">
-                        <h6 class="text-gold fw-bold text-uppercase border-bottom border-gold pb-2 mb-3">Our Services</h6>
-                        <ul class="list-unstyled">
-                           <li><router-link class="mega-link" to="/services/research" @click="closeMenu">Research & Policy</router-link></li>
-                           <li><router-link class="mega-link" to="/services/strategy" @click="closeMenu">Strategic Advisory</router-link></li>
-                           <li><router-link class="mega-link" to="/services/ict" @click="closeMenu">ICT & Data Analytics</router-link></li>
-                           <li><router-link class="mega-link fw-bold mt-2 d-inline-block text-navy" to="/services" @click="closeMenu">View All Services →</router-link></li>
-                        </ul>
-                     </div>
-                  </div>
-               </div>
-            </div>
+            <MegaMenu @close="closeMenu" />
+
           </li>
           
           <li class="nav-item"><router-link class="nav-link" :class="isScrolled ? 'text-navy' : 'text-white'" to="/about" @click="closeMenu">About Us</router-link></li>
@@ -121,7 +107,7 @@ onUnmounted(() => {
           <li class="nav-item dropdown auth-item ms-lg-3" v-if="isLoggedIn && userData">
             <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" :class="isScrolled ? 'text-navy' : 'text-white'" href="#" data-bs-toggle="dropdown">
               <div class="user-avatar-small" :class="isScrolled ? 'border-navy' : 'border-white'">
-                 <img v-if="userData.avatar || userData.photoURL" :src="userData.avatar || userData.photoURL" alt="User">
+                 <img v-if="userAvatar" :src="userAvatar" alt="User" referrerpolicy="no-referrer">
                  <span v-else class="initial-small">{{ userInitial }}</span>
               </div>
               <span class="d-none d-lg-block fw-bold small">{{ userData.displayName || 'User' }}</span>
@@ -151,6 +137,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* STRICT COLORS */
 .text-navy { color: #1b2c57 !important; }
 .text-white { color: white !important; }
 .text-gold { color: #bea429 !important; }
@@ -160,31 +147,19 @@ onUnmounted(() => {
 .border-white { border: 2px solid rgba(255,255,255,0.8); }
 
 /* GOLD BUTTONS */
-.btn-gold { background-color: #bea429; color: #1b2c57; border: none; }
-.btn-gold:hover { background-color: #a38c22; color: white; }
-.btn-outline-gold { border: 2px solid #bea429; color: #bea429; }
-.btn-outline-gold:hover { background-color: #bea429; color: #1b2c57; }
+.btn-gold { background-color: #bea429; color: #1b2c57; border: none; transition: 0.3s; }
+.btn-gold:hover { background-color: #a38c22; color: white; transform: translateY(-2px); }
+.btn-outline-gold { border: 2px solid #bea429; color: #bea429; background: transparent; transition: 0.3s; }
+.btn-outline-gold:hover { background-color: #bea429; color: #1b2c57; transform: translateY(-2px); }
 
-/* MEGA MENU STYLES */
+/* MEGA MENU HOVER LOGIC */
+/* Uses :deep() to target the imported component class */
 @media (min-width: 992px) {
-  .mega-dropdown:hover .mega-menu {
+  .mega-dropdown:hover :deep(.mega-menu) {
       display: block;
       animation: fadeInUp 0.3s ease;
   }
-  .mega-menu {
-      display: none; /* Hidden by default */
-      position: absolute;
-      left: 0; right: 0;
-      width: 100%;
-      border-radius: 0 0 15px 15px;
-      margin-top: 10px;
-  }
 }
-
-.mega-link {
-    display: block; color: #495057; text-decoration: none; padding: 8px 0; transition: all 0.2s;
-}
-.mega-link:hover { color: #bea429; padding-left: 8px; }
 
 /* STANDARD DROPDOWN */
 .dropdown-item { padding: 10px 15px; font-size: 0.95rem; border-radius: 6px; color: #495057; transition: all 0.2s ease; }
@@ -194,8 +169,9 @@ onUnmounted(() => {
 
 /* NAVBAR SCROLL LOGIC */
 .glass-nav {
-    background-color: rgba(255, 255, 255, 0.98) !important;
-    backdrop-filter: blur(10px); 
+    background-color: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px); 
+    -webkit-backdrop-filter: blur(12px);
     padding-top: 0.5rem; padding-bottom: 0.5rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
@@ -214,6 +190,7 @@ onUnmounted(() => {
 .brand-logo { position: absolute; left: 0; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; opacity: 0; transform: translateY(150%); transition: all 0.4s ease-in-out; }
 .show-logo { opacity: 1; transform: translateY(0); }
 
+/* AVATAR STYLES */
 .user-avatar-small { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: #1b2c57; display: flex; align-items: center; justify-content: center; }
 .user-avatar-small img { width: 100%; height: 100%; object-fit: cover; }
 .initial-small { color: white; font-size: 0.8rem; font-weight: bold; }
@@ -227,8 +204,6 @@ onUnmounted(() => {
     }
     .nav-link { color: rgba(255,255,255,0.95) !important; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .nav-link:hover { color: #bea429 !important; }
-    .mega-menu { background: #ffffff !important; padding: 15px; border-radius: 8px; display: block; position: static; box-shadow: none !important;}
-    .mega-link { color: #1b2c57; }
 }
 .transition-navbar { transition: all 0.4s ease-in-out; width: 100%; top: 0; z-index: 1000; -webkit-transform: translateZ(0); transform: translateZ(0); backface-visibility: hidden; }
 </style>

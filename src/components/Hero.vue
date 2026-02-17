@@ -82,7 +82,7 @@ onUnmounted(() => { clearInterval(slideInterval); });
 </template>
 
 <style scoped>
-.hero-section { height: 100vh; min-height: 700px; background-color: #1a2b49; position: relative; }
+.hero-section { height: 100vh; min-height: 700px; background-color: #1b2c57; position: relative; }
 
 .hero-bg {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -91,54 +91,27 @@ onUnmounted(() => { clearInterval(slideInterval); });
 }
 .hero-bg.active { opacity: 1; transform: scale(1.05); }
 
+/* STRICT NAVY RGB (27, 44, 87) */
 .overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(135deg, rgba(26, 43, 73, 0.95), rgba(26, 43, 73, 0.6)); z-index: 1;
+    background: linear-gradient(135deg, rgba(27, 44, 87, 0.95), rgba(27, 44, 87, 0.6)); z-index: 1;
 }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.5s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
 .dot { width: 12px; height: 12px; background: rgba(255,255,255,0.3); border-radius: 50%; cursor: pointer; transition: all 0.3s; }
-.dot.active { background: #D4AF37; transform: scale(1.3); box-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
+.dot.active { background: #bea429; transform: scale(1.3); box-shadow: 0 0 10px rgba(190, 164, 41, 0.5); }
 
-.btn-gold { background-color: #D4AF37; color: #1a2b49; border: none; transition: all 0.3s ease; }
-.btn-gold:hover { background-color: #b5952f; transform: translateY(-3px); color: white; }
+.btn-gold { background-color: #bea429; color: #1b2c57; border: none; transition: all 0.3s ease; }
+.btn-gold:hover { background-color: #a38c22; transform: translateY(-3px); color: white; }
 
 /* RECREATED BRANDING STYLES */
-.brand-permanent-box {
-    text-align: center;
-    max-width: 600px;
-    margin: 0 auto;
-}
-.brand-line {
-    border-top: 2px solid #D4AF37;
-    opacity: 1;
-    margin: 8px 0;
-}
-.brand-title {
-    color: #FFFFFF;
-    font-weight: 800;
-    letter-spacing: 3px;
-    font-family: 'Georgia', 'Times New Roman', serif; /* Serif font matches image */
-    font-size: 1.8rem;
-    margin: 0;
-}
-.brand-subtitle {
-    color: #D4AF37;
-    font-weight: 800;
-    letter-spacing: 4px;
-    font-family: 'Georgia', 'Times New Roman', serif;
-    font-size: 1.3rem;
-    margin: 0;
-}
-.brand-tagline {
-    color: #FFFFFF;
-    font-size: 1.1rem;
-    letter-spacing: 1.5px;
-    margin-top: 8px;
-    font-family: 'Georgia', 'Times New Roman', serif;
-}
+.brand-permanent-box { text-align: center; max-width: 600px; margin: 0 auto; }
+.brand-line { border-top: 2px solid #bea429; opacity: 1; margin: 8px 0; }
+.brand-title { color: #FFFFFF; font-weight: 800; letter-spacing: 3px; font-family: 'Georgia', serif; font-size: 1.8rem; margin: 0; }
+.brand-subtitle { color: #bea429; font-weight: 800; letter-spacing: 4px; font-family: 'Georgia', serif; font-size: 1.3rem; margin: 0; }
+.brand-tagline { color: #FFFFFF; font-size: 1.1rem; letter-spacing: 1.5px; margin-top: 8px; font-family: 'Georgia', serif; }
 
 .fade-in-up { animation: fadeInUp 1s ease-out forwards; animation-delay: 0.5s; opacity: 0; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
