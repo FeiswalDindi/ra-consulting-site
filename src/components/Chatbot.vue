@@ -2,7 +2,7 @@
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
 
 // --- CONFIGURATION ---
-const API_KEY = 'AIzaSyD3cWbia5KjKkv9bXcLp3Aa2apeFwCQH2M';
+const API_KEY = 'AIzaSyCp1JT3QZ3vMJlpo6S3Wu_xj0dYALM754A';
 const STORAGE_KEY = 'ra_chat_history';
 
 const SYSTEM_PROMPT = `
