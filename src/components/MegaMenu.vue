@@ -10,14 +10,16 @@ const emit = defineEmits(['close']);
      <div class="container py-4">
         <div class="row g-4">
            
-           <div class="col-lg-4 mb-3 mb-lg-0">
-              <h6 class="text-gold fw-bold text-uppercase border-bottom border-gold pb-2 mb-3">About Us</h6>
-              <ul class="list-unstyled">
-                 <li><router-link class="mega-link" to="/about" @click="$emit('close')">Who We Are</router-link></li>
-                 <li><router-link class="mega-link" to="/" @click="$emit('close')">Our Mission & Vision</router-link></li>
-                 <li><router-link class="mega-link" to="/about" @click="$emit('close')">Leadership Team</router-link></li>
-              </ul>
-           </div>
+<div class="col-lg-4 mb-3 mb-lg-0">
+    <h6 class="text-gold fw-bold text-uppercase border-bottom border-gold pb-2 mb-3">About Us</h6>
+    <ul class="list-unstyled">
+        <li><router-link class="mega-link" to="/about" @click="$emit('close')">Who We Are</router-link></li>
+        
+        <li><router-link class="mega-link" to="/#mission" @click="$emit('close')">Our Mission & Vision</router-link></li>
+        
+        <li><router-link class="mega-link" to="/about#leadership" @click="$emit('close')">Leadership Team</router-link></li>
+    </ul>
+</div>
            
            <div class="col-lg-4 mb-3 mb-lg-0">
               <h6 class="text-gold fw-bold text-uppercase border-bottom border-gold pb-2 mb-3">Our Solutions</h6>

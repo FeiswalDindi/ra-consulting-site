@@ -86,4 +86,7 @@ router.afterEach((to) => {
     document.title = to.meta.title || 'RA Strategic & Analytics Consulting';
 });
 
+
+
 export default router;
+
