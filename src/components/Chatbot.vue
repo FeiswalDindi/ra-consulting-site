@@ -1,8 +1,9 @@
 <script setup>
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue';
+import { store } from '../store';
 
 // --- CONFIGURATION ---
-const API_KEY = 'AIzaSyCp1JT3QZ3vMJlpo6S3Wu_xj0dYALM754A';
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const STORAGE_KEY = 'ra_chat_history';
 
 const SYSTEM_PROMPT = `
@@ -19,6 +20,12 @@ Your goal is to help clients understand our expertise and encourage them to book
 
 // --- STATE ---
 const isOpen = ref(false);
+const toggleChat = () => {
+    isOpen.value = !isOpen.value;
+    if (isOpen.value) {
+        store.trackActivity("AI Assistant", "User opened the Chatbot window");
+    }
+};
 const isExpanded = ref(true); 
 const isTyping = ref(false);
 const isStreaming = ref(false); 
@@ -139,7 +146,11 @@ const processTypingQueue = async (botMsgId) => {
 
 // --- SEND LOGIC ---
 const sendMessage = async () => {
+
+    
     if (!userMessage.value.trim() || isStreaming.value) return;
+
+    store.trackActivity("AI Assistant", "User sent a message to the AI");
     
     const input = userMessage.value;
     messages.value.push({ id: generateId(), sender: 'user', text: input });
@@ -279,7 +290,7 @@ const sendMessage = async () => {
         </div>
     </transition>
 
-    <button @click="isOpen = !isOpen" class="chat-toggle btn btn-navy shadow-lg rounded-pill d-flex align-items-center justify-content-center gap-2 border-0" :class="{ 'expanded': isExpanded && !isOpen }">
+   <button @click="toggleChat" class="chat-toggle btn btn-navy shadow-lg rounded-pill d-flex align-items-center justify-content-center gap-2 border-0" :class="{ 'expanded': isExpanded && !isOpen }">
         <div v-if="!isOpen" class="d-flex align-items-center justify-content-center text-white">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M16 8c0 3.866-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.584.296-1.925.864-4.181 1.234-.2.032-.352-.176-.273-.362.354-.836.674-1.95.77-2.966C.744 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7zM5 8a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>

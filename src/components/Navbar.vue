@@ -6,7 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'vue-router'; 
 
 import logoImg from '../assets/about.png'; 
-import MegaMenu from './MegaMenu.vue'; // <-- IMPORTING THE NEW COMPONENT!
+import MegaMenu from './MegaMenu.vue'; 
 
 const router = useRouter();
 const isScrolled = ref(false);
@@ -26,6 +26,7 @@ const userInitial = computed(() => {
     return 'U';
 });
 
+// --- FIREBASE AUTO-LOGIN LISTENER ---
 onAuthStateChanged(auth, (user) => {
   if (user) {
       store.user = {
@@ -34,6 +35,13 @@ onAuthStateChanged(auth, (user) => {
           photoURL: user.photoURL,
           role: 'client' 
       };
+
+      // --- NEW: CATCH RETURN VISITS ---
+      // If session storage is empty, they just opened a new tab!
+      if (!sessionStorage.getItem('ra_session_active')) {
+          sessionStorage.setItem('ra_session_active', 'true');
+          store.trackActivity("Session Resumed", `Client returned to the portal: ${user.email}`);
+      }
   }
 });
 
@@ -59,7 +67,6 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 </script>
-
 <template>
   <nav 
     ref="navbarRef"
@@ -169,7 +176,7 @@ onUnmounted(() => {
 
 /* NAVBAR SCROLL LOGIC */
 .glass-nav {
-    background-color: rgba(255, 255, 255, 0.85) !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
     backdrop-filter: blur(12px); 
     -webkit-backdrop-filter: blur(12px);
     padding-top: 0.5rem; padding-bottom: 0.5rem;

@@ -6,7 +6,7 @@ import { auth } from '../firebase';
 // Auth State
 const isLoggedIn = computed(() => !!store.user || !!auth.currentUser);
 
-// Controls which form is visible (null, 'career', or 'partner')
+// Controls which form is visible
 const activeForm = ref(null);
 
 // Form States
@@ -20,7 +20,6 @@ const handleLoginClick = () => {
 const openForm = async (formType) => {
     activeForm.value = formType;
     feedback.value = null;
-    // Wait for the DOM to update, then scroll smoothly to the form section
     await nextTick();
     document.getElementById('application-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
@@ -30,19 +29,36 @@ const closeForm = () => {
     feedback.value = null;
 };
 
-const submitApplication = () => {
+const submitApplication = async (event) => {
     isSubmitting.value = true;
     feedback.value = null;
-    
-    // Simulate API call
-    setTimeout(() => {
+
+    // Grab the actual form HTML element
+    const formElement = event.target;
+    const formData = new FormData(formElement);
+
+    // Add hidden configuration for FormSubmit to ensure a smooth, silent send
+    formData.append("_subject", activeForm.value === 'career' ? "New Career Application" : "New Partnership Proposal");
+    formData.append("_captcha", "false"); // Disables the visual robot check!
+
+    try {
+        // Silent AJAX request
+        const response = await fetch("https://formsubmit.co/ajax/3e6265ca4854258cac18a99095b6f2d5", {
+            method: "POST",
+            body: formData
+        });
+
+        if (response.ok) {
+            feedback.value = "Successfully submitted! Our team will securely review your details shortly.";
+            setTimeout(() => { closeForm(); }, 4000);
+        } else {
+            throw new Error("Submission Failed");
+        }
+    } catch (error) {
+        feedback.value = "An error occurred submitting your data. Please check your connection and try again.";
+    } finally {
         isSubmitting.value = false;
-        feedback.value = "Successfully submitted! Our team will review your details shortly.";
-        // Auto-close after success
-        setTimeout(() => {
-            closeForm();
-        }, 4000);
-    }, 1500);
+    }
 };
 </script>
 
@@ -143,15 +159,15 @@ const submitApplication = () => {
                             <div class="row g-4 mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted">Full Name</label>
-                                    <input type="text" class="custom-input" required>
+                                    <input type="text" name="Applicant_Name" class="custom-input" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted">Email Address</label>
-                                    <input type="email" class="custom-input" required>
+                                    <input type="email" name="Applicant_Email" class="custom-input" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted">Position</label>
-                                    <select class="custom-input" required>
+                                    <select name="Role_Applied_For" class="custom-input" required>
                                         <option value="">Select a role...</option>
                                         <option>Data Analyst</option>
                                         <option>Research Consultant</option>
@@ -161,15 +177,15 @@ const submitApplication = () => {
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted">Upload Resume (PDF)</label>
-                                    <input type="file" class="custom-input file-input" accept=".pdf" required>
+                                    <input type="file" name="Resume_Attachment" class="custom-input file-input" accept=".pdf" required>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small fw-bold text-muted">Cover Letter / Note</label>
-                                    <textarea rows="4" class="custom-input" placeholder="Tell us about your experience..." required></textarea>
+                                    <textarea name="Cover_Letter" rows="4" class="custom-input" placeholder="Tell us about your experience..." required></textarea>
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-navy w-100 py-3 rounded-pill fw-bold text-uppercase ls-1" :disabled="isSubmitting">
-                                {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
+                                {{ isSubmitting ? 'Securely Submitting...' : 'Submit Application' }}
                             </button>
                         </form>
 
@@ -177,23 +193,23 @@ const submitApplication = () => {
                             <div class="row g-4 mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted">Organization / Consultant Name</label>
-                                    <input type="text" class="custom-input" required>
+                                    <input type="text" name="Organization_Name" class="custom-input" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold text-muted">Contact Email</label>
-                                    <input type="email" class="custom-input" required>
+                                    <input type="email" name="Contact_Email" class="custom-input" required>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small fw-bold text-muted">Partnership Proposal</label>
-                                    <textarea rows="5" class="custom-input" placeholder="Describe how we can collaborate and the expertise you bring..." required></textarea>
+                                    <textarea name="Proposal_Details" rows="5" class="custom-input" placeholder="Describe how we can collaborate and the expertise you bring..." required></textarea>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label small fw-bold text-muted">Company Profile (Optional)</label>
-                                    <input type="file" class="custom-input file-input" accept=".pdf">
+                                    <input type="file" name="Company_Profile_Attachment" class="custom-input file-input" accept=".pdf">
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-navy w-100 py-3 rounded-pill fw-bold text-uppercase ls-1" :disabled="isSubmitting">
-                                {{ isSubmitting ? 'Sending Proposal...' : 'Submit Proposal' }}
+                                {{ isSubmitting ? 'Securely Sending Proposal...' : 'Submit Proposal' }}
                             </button>
                         </form>
 
@@ -214,7 +230,7 @@ const submitApplication = () => {
 
 .ls-1 { letter-spacing: 1px; }
 
-/* INTRO CARDS (Reverted to clean white/navy look) */
+/* INTRO CARDS */
 .icon-circle {
     width: 80px; height: 80px;
     border-radius: 50%;
@@ -269,7 +285,7 @@ const submitApplication = () => {
 }
 .custom-input:focus {
     outline: none; background-color: white;
-    border-bottom-color: #1b2c57; /* Focus is Navy, not Gold */
+    border-bottom-color: #1b2c57; 
     box-shadow: 0 5px 15px rgba(27, 44, 87, 0.05);
 }
 .file-input { background-color: white; border: 1px dashed #ccc; }

@@ -1,7 +1,7 @@
 import { reactive } from 'vue';
-import { db, auth } from './firebase'; // Ensure 'auth' is imported
+import { db, auth } from './firebase'; 
 import { 
-    doc, setDoc, getDoc, onSnapshot, collection, addDoc, serverTimestamp, query, orderBy, limit 
+    doc, setDoc, onSnapshot, collection, addDoc, serverTimestamp, query, orderBy, limit 
 } from 'firebase/firestore'; 
 import { 
     createUserWithEmailAndPassword, 
@@ -35,17 +35,14 @@ const savedUser = loadUser();
 
 // --- STORE DEFINITION ---
 export const store = reactive({
-  // STATE
   user: savedUser,         
   isLoginModalOpen: false,
   isLogoutModalOpen: false,
   isAdmin: savedUser?.role === 'admin', 
   
-  // LIVE LOGS STATE
   activityLogs: [],
   isLoadingLogs: true,
 
-  // CONTENT STATE
   content: loadContent() || {
     heroSlides: [], 
     hero: { buttonText: 'Explore Our Services' },
@@ -53,8 +50,6 @@ export const store = reactive({
     socialUpdates: [],
     resources: [] 
   },
-
-  // --- ACTIONS ---
 
   // 1. GLOBAL LOG LISTENER
   initLogListener() {
@@ -105,11 +100,9 @@ export const store = reactive({
 
   // --- AUTHENTICATION ---
 
-  // 1. HYBRID LOGIN (Hardcoded Admin OR Real Firebase User)
   async login(email, password) {
     let loggedInUser = null;
 
-    // A. CHECK HARDCODED ADMIN FIRST
     if (email === 'admin123@gmail.com' && password === 'admin') {
         loggedInUser = { 
             displayName: 'Feisal Dindi', 
@@ -120,7 +113,6 @@ export const store = reactive({
         };
         this.isAdmin = true;
     }
-    // B. CHECK HARDCODED DEMO CLIENT
     else if (email === 'client@demo.com' && password === 'client123') {
         loggedInUser = { 
             displayName: 'Demo Client', 
@@ -131,14 +123,11 @@ export const store = reactive({
         };
         this.isAdmin = false;
     }
-    // C. CHECK REAL FIREBASE USERS
     else {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
             
-            // Fetch extra role data from Firestore if needed
-            // For now, default to client if not admin
             loggedInUser = {
                 displayName: firebaseUser.displayName || 'Valued Client',
                 email: firebaseUser.email,
@@ -153,9 +142,10 @@ export const store = reactive({
         }
     }
 
-    // FINAL: SAVE SESSION
+    // FINAL: SAVE SESSION & PREVENT DOUBLE LOGGING
     if (loggedInUser) {
         this.user = loggedInUser;
+        sessionStorage.setItem('ra_session_active', 'true'); // <-- SET SESSION ACTIVE
         localStorage.setItem(USER_KEY, JSON.stringify(loggedInUser));
         this.trackActivity("Login", `User logged in: ${loggedInUser.email}`);
         return true;
@@ -163,20 +153,16 @@ export const store = reactive({
     return false;
   },
 
-  // 2. REAL FIREBASE SIGNUP
   async signup(name, email, password) {
       try {
-          // A. Create User in Firebase Authentication
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
 
-          // B. Update Profile Name
           await updateProfile(user, {
               displayName: name,
               photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=28a745&color=fff`
           });
 
-          // C. Create User Document in Firestore (The Missing Link!)
           const newUserProfile = {
               uid: user.uid,
               displayName: name,
@@ -187,12 +173,13 @@ export const store = reactive({
 
           await setDoc(doc(db, "users", user.uid), newUserProfile);
 
-          // D. Set Local State
           this.user = {
               ...newUserProfile,
               avatar: user.photoURL
           };
           this.isAdmin = false;
+          
+          sessionStorage.setItem('ra_session_active', 'true'); // <-- SET SESSION ACTIVE
           localStorage.setItem(USER_KEY, JSON.stringify(this.user));
           
           this.trackActivity("Sign Up", "New Account Created via Portal");
@@ -200,18 +187,19 @@ export const store = reactive({
 
       } catch (error) {
           console.error("Signup Error:", error);
-          alert(error.message); // Show actual firebase error (e.g., "Email already in use")
+          alert(error.message); 
           return false;
       }
   },
   
   async logout() {
       try {
-          await signOut(auth); // Sign out from Firebase
+          await signOut(auth); 
           this.trackActivity("Logout", "User signed out");
           this.user = null;
           this.isAdmin = false;
           localStorage.removeItem(USER_KEY);
+          sessionStorage.removeItem('ra_session_active'); // <-- DESTROY SESSION
           this.isLogoutModalOpen = false;
       } catch (e) {
           console.error("Logout Error", e);
@@ -251,3 +239,9 @@ onSnapshot(doc(db, "global_content", "main_data"), (doc) => {
         localStorage.setItem(CONTENT_KEY, JSON.stringify({ version: APP_VERSION, data: store.content }));
     }
 });
+
+// --- NEW: CATCH HARDCODED USERS RETURNING ---
+if (store.user && !sessionStorage.getItem('ra_session_active')) {
+    sessionStorage.setItem('ra_session_active', 'true');
+    store.trackActivity("Session Resumed", `User returned to the portal: ${store.user.email}`);
+}
