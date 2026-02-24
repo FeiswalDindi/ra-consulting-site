@@ -176,7 +176,7 @@ onUnmounted(() => {
 
 /* NAVBAR SCROLL LOGIC */
 .glass-nav {
-    background-color: rgba(255, 255, 255, 0.15) !important;
+    background-color: rgba(255, 255, 255, 0.55) !important;
     backdrop-filter: blur(12px); 
     -webkit-backdrop-filter: blur(12px);
     padding-top: 0.5rem; padding-bottom: 0.5rem;

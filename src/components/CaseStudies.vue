@@ -4,7 +4,7 @@ import { ref } from 'vue';
 // PRO DATA STRUCTURE: Replaced Emojis with SVG Paths
 const cases = ref([
     {
-        client: 'Africa Nazarene University',
+        client: 'CONFIDENTIAL',
         category: 'Strategy & Governance',
         title: 'Institutional Strategic Planning',
         result: '5-Year Strategic Roadmap',
@@ -12,7 +12,7 @@ const cases = ref([
         icon: "M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917l-7.5-3.5Z M8 8.46 1.758 5.965 8 3.052l6.242 2.913L8 8.46Z" 
     },
     {
-        client: 'Farsight Africa Group',
+        client: 'CONFIDENTIAL',
         category: 'Research & Policy',
         title: 'Socio-Economic Impact Assessment',
         result: 'Data-Driven Policy Shift',
@@ -20,7 +20,7 @@ const cases = ref([
         icon: "M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V2z"
     },
     {
-        client: 'Fortress Engineering Ltd',
+        client: 'CONFIDENTIAL',
         category: 'Corporate Advisory',
         title: 'Operational Restructuring',
         result: '30% Efficiency Increase',
