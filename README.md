@@ -8,14 +8,27 @@ A modern, responsive Vue.js web application for RA Strategic & Analytics Consult
 
 Experience our website in action: [RA Consulting Live Site](https://ra-consulting-site.vercel.app/)
 
-The live preview showcases:
-- **Home Page**: Hero section with company overview and key services
-- **About Us**: Mission, vision, values, and organizational structure
-- **Services**: Detailed service offerings with case studies
-- **Contact**: Get in touch form and location information
-- **Careers**: Join our team opportunities
-- **Insights**: Industry insights and thought leadership
-- **Admin Dashboard**: Secure admin panel for content management
+### Screenshots
+
+#### Home Page
+![Home Page](screenshots/home.png)
+
+*Hero section with company overview, key services, client testimonials, and social media feed.*
+
+#### About Us
+![About Us](screenshots/about.png)
+
+*Mission, vision, values, organizational structure, and team information.*
+
+#### Services
+![Services](screenshots/services.png)
+
+*Detailed service offerings including Research & Policy Advisory, ICT & Data Analytics, Strategic Corporate Advisory, and Products & Solutions.*
+
+#### Admin Login
+![Admin Login](screenshots/admin-login.png)
+
+*Secure login portal for accessing the admin CMS dashboard with Google authentication and manual login options.*
 
 Navigate through the pages to see smooth transitions, responsive design, and interactive features like our AI chatbot and WhatsApp integration.
 
