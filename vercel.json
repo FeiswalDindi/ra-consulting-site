@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/:page(about|contact|services|careers|partners|insights|admin|dashboard)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/services/:serviceId",
+      "destination": "/index.html"
+    }
+  ]
+}
